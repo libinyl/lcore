@@ -1,5 +1,9 @@
 ## ucore Lab0 一些杂记
 
+前一阵子开始做 MIT 6.828，做了两三个实验才发现清华的 ucore 貌似更友好一些，再加上前几个实验也与6.828 有所重叠，于是决定迁移阵地。
+
+文章计划分两类，一类是代码的分析，另一类是实验的解答和比较。
+
 ## 1. 计算机执行第一条指令之前,分段状态是怎样的?
 
 执行`make debug`, 然后考察 QEMU monitor 中 GDT 的值:
@@ -8,7 +12,7 @@ GDT= 00000000 0000ffff
 
 参考 GDTR 寄存器:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-6.%20Memory%20Management%20Registers.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-6.%20Memory%20Management%20Registers.png?raw=true)
 
 参考手册 2.4.1 节描述:
 
@@ -60,13 +64,13 @@ Program Headers:
 
 可知 kernel 提供了两个 program header,与section header对照,并结合链接脚本可知 kernel 提供的链接信息如下:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/kernel%20%E9%93%BE%E6%8E%A5%E4%BF%A1%E6%81%AF.png)
+![](https://github.com/libinyl/ucore-study/blob/master/images/kernel%20%E9%93%BE%E6%8E%A5%E4%BF%A1%E6%81%AF.png?raw=true)
 
 ## 5. bootasm.S 中切换到保护模式之后，GDT 的分布是怎样的？
 
 参考手册 2.4.1 节，`GDTR` 寄存器长度是 48bit, 32 位模式下维护着 `GDT` 的线性基址和字节数量。
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-6.%20Memory%20Management%20Registers.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-6.%20Memory%20Management%20Registers.png?raw=true)
 
 `LGDT` 和 `SGDT` 分别用于（从程序中）**加载**（至 cpu) 和（从 CPU) **保存**（到程序）中。cpu 重置时，`GDT`基址默认为 0,limit 默认为`0FFFFH`. 初始化保护模式时必须设置新的基址。
 
@@ -74,7 +78,7 @@ Program Headers:
 
 每个 segment descriptor 是 32*2=64 bit.
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-8.%20Segment%20Descriptor.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-8.%20Segment%20Descriptor.png?raw=true)
 
 汇编代码初始化了代码段和数据段：
 
@@ -91,7 +95,7 @@ gdt:
 
 type 的定义可参考手册 3.4.5.1 节：
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Table%203-1.%20Code-%20and%20Data-Segment%20Types.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Table%203-1.%20Code-%20and%20Data-Segment%20Types.png?raw=true)
 
 代码中事实上给出了相应的宏：
 
@@ -109,7 +113,7 @@ type 的定义可参考手册 3.4.5.1 节：
 
 代码初始阶段我们将内存设置为平铺模型（参考手册 3.2.2 节）:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-2.%20Flat%20Model.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-2.%20Flat%20Model.png?raw=true)
 
 所以 base 和 limit 设置为内存边界值。
 
@@ -166,14 +170,14 @@ ljmp $PROT_MODE_CSEG, $protcseg
 
 关于段选择子的格式,参考手册 3.4.3 节:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-7.%20Segment%20Registers.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure 3-7. Segment Registers.png?raw=true)
 
 
 高位是索引,手动写入,低位由 cpu 自动写入.
 
 再考察 Segment Selector 的格式(3.4.2 节):
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-6.%20Segment%20Selector.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-6.%20Segment%20Selector.png?raw=true)
 
 Segment Selector 的三个字段分别是 Index,TI,RPL.
 
@@ -181,7 +185,7 @@ Segment Selector 的三个字段分别是 Index,TI,RPL.
 
 计算过程图:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-5.%20Translating%20a%20logical%20address.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%202-5.%20Translating%20a%20logical%20address.png?raw=true)
 
 > 图自 *Understanding the LINUX KERNEL, 3rd edition*
 
@@ -237,11 +241,11 @@ movl   %esp , %ebp
 
 中段描述符表(IDT):
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-8.%20Segment%20Descriptor.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-8.%20Segment%20Descriptor.png?raw=true)
 
 参考手册 6-11:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%206-2.%20IDT%20Gate%20Descriptors.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%206-2.%20IDT%20Gate%20Descriptors.png?raw=true)
 
 三种 gate 通过 type 指定类型.
 
