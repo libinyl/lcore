@@ -170,7 +170,7 @@ ljmp $PROT_MODE_CSEG, $protcseg
 
 关于段选择子的格式,参考手册 3.4.3 节:
 
-![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure 3-7. Segment Registers.png?raw=true)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-7.%20Segment%20Registers.png?raw=true)
 
 
 高位是索引,手动写入,低位由 cpu 自动写入.
