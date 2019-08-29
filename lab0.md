@@ -109,7 +109,7 @@ type 的定义可参考手册 3.4.5.1 节：
 
 代码初始阶段我们将内存设置为平铺模型（参考手册 3.2.2 节）:
 
-![](https://github.com/libinyl/CS-notes/tree/master/images/intel/v3Figure&#32;3-2.&#32;Flat&#32;Model.png)
+![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%203-2.%20Flat%20Model.png)
 
 所以 base 和 limit 设置为内存边界值。
 
