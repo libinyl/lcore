@@ -255,4 +255,30 @@ movl   %esp , %ebp
 
 本来特权级低的代码是不能访问特权级高的代码段(内核态)的,但是通过等级更低的门就可以了,门的特殊功效就是通向更高级别的段!这就是所谓的系统调用.
 
+## Lab 1 练习 6 STEP 2: 完善 idt_init
+
+直接执行 `make qemu-nox` 会出发 Triple fault.
+
+STEP 2的要求是在idt_init函数中依次对所有中断入口进行初始化.同时也给出了提示,每个中断的入口由`tools/vectors.c`生成.
+
+回忆一下中断机制依赖的数据结构: IDTR 维护 IDT 表的基址. 
+
+实验提供了哪些中断?查看 `vector.S`可知已预置 256 个中断.
+
+这里的`__vectors`起到入口索引的作用,可以看做是一个数组,每个元素都维护着中断处理函数的入口.
+
+因此,只需一个 for 循环把这些中断项依次 SETGATE 即可:
+
+```
+     extern uintptr_t __vectors[];
+     for(int i = 0;i < sizeof(idt)/sizeof(struct gatedesc);++i)
+     {
+        SETGATE(idt[i], 0, GD_KTEXT,__vectors[i],DPL_KERNEL);
+     }
+     SETGATE(idt[T_SYSCALL],1,GD_KTEXT,__vectors[T_SYSCALL], DPL_USER);// 系统调用,软中断,是 trap,需要从 0特权转换为0 特权,故 DPL=3.目前 lab2result 写的是T_SWITCH_TOK,尚不知原因.
+     lidt(&idt_pd);// 加载维护 idt 位置的结构到 idtr.
+```
+
+
+
 
