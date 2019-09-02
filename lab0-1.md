@@ -279,6 +279,28 @@ STEP 2的要求是在idt_init函数中依次对所有中断入口进行初始化
      lidt(&idt_pd);// 加载维护 idt 位置的结构到 idtr.
 ```
 
+## 其他
 
+调试时遇到一个非常有意思的坑.填充`print_stackframe`函数时,这样写是错误的,会触发`Triple fault`:
 
+```C
+void
+print_stackframe(void) {
 
+    uint32_t ebp = read_ebp(), eip = read_eip();
+
+    for (int i = 0; ebp != 0 && i < STACKFRAME_DEPTH; i ++) {
+        cprintf("ebp:0x%08x eip:0x%08x args:", ebp, eip);
+        uint32_t *args = (uint32_t *)ebp + 2;
+        for (int j = 0; j < 4; j ++) {
+            cprintf("0x%08x ", args[j]);
+        }
+        cprintf("\n");
+        print_debuginfo(eip - 1);
+
+        ebp = ((uint32_t *)ebp)[0];
+        eip = ((uint32_t *)ebp)[1];
+    }
+}
+```
+解决办法是互换最后两行.**更新ebp 一定要在更新 eip 之后**!
