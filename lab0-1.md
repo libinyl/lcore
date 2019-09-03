@@ -298,7 +298,7 @@ print_stackframe(void) {
         cprintf("\n");
         print_debuginfo(eip - 1);
 
-        ebp = ((uint32_t *)ebp)[0];
+        ebp = ((uint32_t *)ebp)[0];// 顺序错误,获取 eip 的值时还需用到 ebp
         eip = ((uint32_t *)ebp)[1];
     }
 }
