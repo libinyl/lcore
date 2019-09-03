@@ -53,7 +53,7 @@ call graph:
 
 ### 1.4 用`mm_struct`和`vma_struct`解决合法性描述的问题
 
-![](/虚拟地址空间和物理地址空间的示意图.png)
+![](https://github.com/libinyl/ucore-study/blob/master/images/%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%92%8C%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E7%9A%84%E7%A4%BA%E6%84%8F%E5%9B%BE.png?raw=true)
 
 每个进程维护着一个 `mm_struct`,作为内存描述块的头结点;以此为头节点,每个当前用到的合法的虚拟页都对应一串`vma_struct`.注意图中的倒数第二页虚拟内存是合法的,但是其没有对应的页表,也就是尚未分配.此时访问该虚拟内存就会触发 page_fault.
 
