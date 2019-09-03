@@ -94,9 +94,9 @@ struct mm_struct {
 };
 ```
 
-###1.5 内存描述符的操作函数
+### 1.5 内存描述符的操作函数
 
--vma_struct
+- vma_struct
   - vma_create
   - insert_vma_struct
   - find_vma
@@ -139,20 +139,18 @@ CR2 是`Page Fault`专用的线性地址寄存器.
 
 ### 1.7 errorcode的表示
 
-参考手册 6.13
+参考手册 6.13,errorcode 的通用定义:
 
 ![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%206-6.%20Error%20Code.png?raw=true)
 
 
-**EXT** External event (bit 0),值为 1 时表示硬件外部中断.
+**EXT** External event (**bit 0**),值为 1 时表示硬件外部中断.
 
-**IDT** Descriptor location (bit 1), 置为 1 时表示errorcode 的索引部分引用的是 IDT 的一个门描述符,置为 0 时表示引用 GDT 或者当前 LDT 的描述符.
+**IDT** Descriptor location (**bit 1**), 置为 1 时表示errorcode 的索引部分引用的是 IDT 的一个门描述符,置为 0 时表示引用 GDT 或者当前 LDT 的描述符.
 
-**TI** 只在 IDT 位为 0 时有用.此时 TI 表示errorcode 的索引部分是 LDT,为 1 是是 GDT.
+**TI** (**bit 2**)只在 IDT 位为 0 时有用.此时 TI 表示errorcode 的索引部分是 LDT,为 1 是是 GDT.
 
-那么索引部分呢?
-
-参考手册 6.15 节:
+**注意 Page fault 的错误码比较特殊** ,格式如下,参考 6.15 节 p6-40 **Interrupt 14—Page-Fault Exception (#PF)** 一章
 
 ![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%206-9.%20Page-Fault%20Error%20Code.png?raw=true)
 
@@ -183,14 +181,93 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr);
 我们的 `do_pgfault`函数的处理流程也就清晰了:
 
 1. 判断 `addr` 合法性
-2. 
-3. 在 `mm_struct`指向的链表中搜索`addr`
+   1. 在 `mm_struct`指向的链表中搜索`addr`.若搜到且权限正确,则判定为合法
+2. 若合法,则建立虚实映射关系
+   1. 分配一个空闲的内存页,修改页表,完成映射,刷新 TLB
+
+
+可用的工具函数:
+
+```C
+// 给定内存控制块,在其中查找 addr 对应的 vma
+// (vma->vm_start <= addr <= vma_vm_end)
+struct vma_struct *
+find_vma(struct mm_struct *mm, uintptr_t addr);
+```
+
+**考察错误码**
+
+我们关注的的逻辑集中在后两位。枚举后两位，可以得到的状态如下.对应附上了处理方式.
+
+- **00**
+  - fault 原因: 对一个 "不存在"的地址进行了 读 操作
+- **01**：
+  - fault 原因: 对一个 "不存在"的地址进行了 写 操作
+- **10**：
+  - fault 原因: 对一个存在的地址进行了 读 操作,但触发了页保护(权限)错误--实打实的权限问题,这是不应该出现的
+- **11**
+  - fault 原因: 对一个存在的地址进行了 写 操作,但触发了页保护(权限)错误
+
+源代码中对四种状态与 vm 中的 flag 位进行了校验,排除了不应该存在的情况,这里省略不表,通过校验的条件如下:
+
+```
+IF  (write an existed addr ) OR
+    (write an non_existed addr && addr is writable) OR
+    (read  an non_existed addr && addr is readable)
+THEN
+    continue process
+```
+
+
+**练习1 代码**
+
+终于来到了写 lab3 代码的时候.**如何建立 addr 的虚实映射关系?**
+
+1. 获取这个 addr 对应的 page table entry,如果没有就新分配一个物理页作为 page table.
+2. 获取后判断这个 pte 是否为空,若为空,则需要建立映射 用到`pgdir_alloc_page`函数
+   
+
+**考察pgdir_alloc_page**
+
+
+
+```
+//给定线性地址和 page directory,为这个地址进行映射!
+// 所谓映射,就是要建立好页表和页表值.
+struct Page *
+pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm)
+```
+
+注意其调用的`page_insert`含义是把新申请的物理 page与线性地址 关联起来,"insert"一个新的受管理的物理页.
+
+
+
+最终的代码:
+
+```
+// 定位 pte 的地址
+if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
+    cprintf("get_pte in do_pgfault failed\n");
+    goto failed;
+}
+// 考察 pte,若未映射过则重新映射.
+if (*ptep == 0) { // if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
+    if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
+        cprintf("pgdir_alloc_page in do_pgfault failed\n");
+        goto failed;
+    }
+}
+else...
+```
+
+此函数尚未完成,下半部分需要先了解页面替换算法才能完成.
+
+
+## 练习 2 完成 FIFO 页面替换算法
+
 
 
 未完待续...
-
-
-![](2019-09-03-20-43-47.png)
 
 
 
