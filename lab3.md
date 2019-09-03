@@ -156,7 +156,7 @@ CR2 是`Page Fault`专用的线性地址寄存器.
 
 ![](https://github.com/libinyl/CS-notes/blob/master/images/intel/v3/Figure%206-9.%20Page-Fault%20Error%20Code.png?raw=true)
 
-### 1.1 分析`do_pgfault`函数的上下文.
+### 1.8 分析`do_pgfault`函数的逻辑
 
 
 call graph:
@@ -176,15 +176,21 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr);
 
 有了上面的分析,do_pgfault函数的参数也就清晰了,分别是:
 
-- 进程内存合法性记录表的头结点`mm_struct`,
-- 错误码 `error_code`
-- cr2 寄存器中记录的当前要访问的目标线性地址
+- `mm_struct`: 进程内存合法性记录表的头结点
+- `error_code`: 错误码,说明了异常的类型
+- `addr`: cr2 寄存器中记录的当前要访问的目标线性地址
+
+我们的 `do_pgfault`函数的处理流程也就清晰了:
+
+1. 判断 `addr` 合法性
+2. 
+3. 在 `mm_struct`指向的链表中搜索`addr`
 
 
 未完待续...
 
 
-
+![](2019-09-03-20-43-47.png)
 
 
 
