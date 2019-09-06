@@ -265,6 +265,187 @@ else...
 
 ## 练习 2 完成 FIFO 页面替换算法
 
+### 2.1 什么是置换?
+
+当出现缺页异常,需要调入新页面,但是物理内存已满时,需要把某个物理页面与磁盘中的数据进行置换.
+
+### 2.2 哪些页可以被换出?
+
+- 被内核直接使用的内核空间的页面不可换出
+- 映射至用户空间且被用户程序直接访问的页面可以被交换
+
+### 2.3 页换入换出机制是怎样的?
+
+要实现页换入换出,至少要有以下接口:
+
+1. `swap` 层
+2. `swapfs` 层,专用于 swap 的模拟文件系统,提供了以 `page` 为单位读写的接口,代码位于`swapfs.[hc]`
+3. 磁盘读写接口,以字节为单位读写,代码位于`ide.[hc]`
+
+
+### 2.4 磁盘给出了怎样的接口?怎样进行磁盘的读写?
+
+磁盘读写接口位于`ide.[hc]`文件中,具体可参考我的 lab8 实验笔记.
+
+### 2.5 `swapfs`层提供了怎样的接口?
+
+提供了以`swap_entry_t`(的高 8 位)为磁盘扇区号,`page`为内存读写基址的读写接口.
+
+```C
+// 把 entry<<8 号的扇区开始的一页加载到内存 page 处
+swapfs_read(swap_entry_t entry, struct Page *page) {
+    return ide_read_secs(SWAP_DEV_NO, swap_offset(entry) * PAGE_NSECT, page2kva(page), PAGE_NSECT);
+}
+```
+
+``` C
+// 把 内存 page 处开始的一页写入到磁盘的 entry<<8 号扇区
+int
+swapfs_write(swap_entry_t entry, struct Page *page) {
+    return ide_write_secs(SWAP_DEV_NO, swap_offset(entry) * PAGE_NSECT, page2kva(page), PAGE_NSECT);
+}
+```
+
+`PAGE_NSECT`:  = (PGSIZE / SECTSIZE), 每个`page`占用的扇区数,实际值为 8.
+
+关于`swap_offset`:
+
+```C
+// swap_entry_t 右移 8 位作为 page 的数量
+#define swap_offset(entry) ({                                       \
+               size_t __offset = (entry >> 8);                        \
+               if (!(__offset > 0 && __offset < max_swap_offset)) {    \
+                    panic("invalid swap_entry_t = %08x.\n", entry);    \
+               }                                                    \
+               __offset;                                            \
+          })
+```
+
+`swap_entry_t`的含义:
+
+```
+----------------------------
+offset  |   reserved    | 0 |
+----------------------------
+24bits      7bits         1bits
+```
+
+`offset`给出了扇区号.
+
+### 2.5 swap层提供了哪些接口?
+
+考察`swap.c`:
+```
+
+int swap_out(struct mm_struct *mm, int n, int in_tick);
+```
+```
+// 把虚拟地址 addr 对应的磁盘上的扇区读取到虚拟地址处.辅助参数:mm,用于确定 page directory;出参: ptr_result,
+int swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result);
+
+```
+
+### 2.6 何时触发换入?何时触发换出?
+
+需要区分合法性与存在性的概念.
+
+`check_mm_struct`维护了所有的合法的虚拟内存空间集合;页表描述了此页是否在内存中出现.
+
+如果访问地址合法,但不存在于内存,说明在磁盘中.此时触发**换入**.
+
+对于(消极)换出,则是当系统分配内存时发现内存不够用了,没有空闲的物理页可分配,此时需要把一些内存的数据放入到磁盘中,触发**换入**操作.
+
+### 2.7 如何表示物理页的使用情况?
+
+拓展`Page`结构:
+
+```
+struct Page {
+    int ref;                        // 引用计数
+    uint32_t flags;                 // 页状态
+    unsigned int property;          // first fit 物理内存管理算法使用,空闲块的数量
+    list_entry_t page_link;         // free list link
+    list_entry_t pra_page_link;     // used for pra (page replace algorithm)
+    uintptr_t pra_vaddr;            // used for pra (page replace algorithm)
+};
+```
+注意新增的`pra_page_link`和`pra_vaddr`.
+
+
+
+
+
+
+考察"抽象"页交换管理器`struct swap_manager`:
+
+```C
+struct swap_manager
+{
+    const char *name;
+    // 全局状态初始化
+    int (*init)            (void);
+    /* Initialize the priv data inside mm_struct */
+    // 初始化 mm_struct 中的 sm_priv
+    int (*init_mm)         (struct mm_struct *mm);
+    /* Called when tick interrupt occured */
+    int (*tick_event)      (struct mm_struct *mm);
+    /* Called when map a swappable page into the mm_struct */
+    int (*map_swappable)   (struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in);
+    /* When a page is marked as shared, this routine is called to
+    * delete the addr entry from the swap manager */
+    int (*set_unswappable) (struct mm_struct *mm, uintptr_t addr);
+    /* Try to swap out a page, return then victim */
+    int (*swap_out_victim) (struct mm_struct *mm, struct Page **ptr_page, int in_tick);
+    /* check the page relpacement algorithm */
+    int (*check_swap)(void);     
+};
+```
+
+
+### 2.4 ucore 如何表示一个页被换到的了磁盘上?
+
+ucore 借助一个与 PTE 结构类似的结构`swap_entry_t`来表示虚拟页与磁盘页的映射关系.它的存在位(PTE_P)来表示物理页的状态.
+
+1. 当 PTE_P = 1 时,相应的物理页在内存中
+2. 当 PTE_P = 0 时,相应的物理页在外存中
+
+也就是说我们的`PTE`有两种不同的语义.当 PTE_P = 1 时,位含义如下:
+
+![](/images/PTE.png)
+
+当 PTE_P = 0 时,位含义如下:
+### 2.5 如何换入(swap_in)?
+
+考察函数:
+
+```
+int
+swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result);
+```
+
+
+### 2.6 page fault 的下半部分
+
+```
+else {
+        // 末位为 0,说明这是一个用于表示交换页的 entry.
+        // 从磁盘加载数据,插入页中,建立映射.
+    if(swap_init_ok) {
+        struct Page *page=NULL;
+        if ((ret = swap_in(mm, addr, &page)) != 0) {
+            cprintf("swap_in in do_pgfault failed\n");
+            goto failed;
+        }    
+        page_insert(mm->pgdir, page, addr, perm);
+        swap_map_swappable(mm, addr, page, 1);
+        page->pra_vaddr = addr;
+    }
+    else {
+        cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
+        goto failed;
+    }
+}
+```
 
 
 未完待续...
@@ -297,5 +478,7 @@ else...
 
 ## 参考资料
 
+- [uCore操作系统编程实验手记（三)](https://blog.csdn.net/hezxyz/article/details/96686194)
 - 实验指导书[链接](https://chyyuu.gitbooks.io/ucore_os_docs/content/lab3/lab3_2_1_exercises.html)
 - *Linux内核设计与实现* Chapter 15
+- *OSTEP*
