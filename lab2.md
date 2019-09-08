@@ -1,13 +1,10 @@
-## ucore Lab2
+# ucore Lab2
 
-lab 2 直接执行`make qemu-nox`会显示 assert 失败:
+## 实验要点
 
-```
-kernel panic at kern/mm/default_pmm.c:277:
-    assertion failed: (p0 = alloc_page()) == p2 - 1
-```
+- 以页为单位实现物理内存管理
 
-## 1 连续物理内存管理
+## 1 非连续物理内存管理
 
 ## 1.1 page 概览
 
