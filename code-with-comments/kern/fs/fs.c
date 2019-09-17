@@ -29,14 +29,22 @@ void
 unlock_files(struct files_struct *filesp) {
     up(&(filesp->files_sem));
 }
-//Called when a new proc init
+
+/*
+ * 创建一个进程的文件列表.
+ * 
+ * 用于新进程的初始化.
+ */ 
 struct files_struct *
 files_create(void) {
     //cprintf("[files_create]\n");
     static_assert((int)FILES_STRUCT_NENTRY > 128);
     struct files_struct *filesp;
+    // 1. 分配两块内存用于存储文件结构体+fd 数组.内存大小为一整页.
     if ((filesp = kmalloc(sizeof(struct files_struct) + FILES_STRUCT_BUFSIZE)) != NULL) {
+        // 2. 当前工作目录是 NULL
         filesp->pwd = NULL;
+        // 打开的文件列表是
         filesp->fd_array = (void *)(filesp + 1);
         filesp->files_count = 0;
         sem_init(&(filesp->files_sem), 1);

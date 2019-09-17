@@ -20,12 +20,12 @@ struct inode;
 struct file;
 
 /*
- * process's file related informaction
+ * 进程的文件信息
  */
 struct files_struct {
-    struct inode *pwd;      // inode of present working directory
-    struct file *fd_array;  // opened files array
-    int files_count;        // the number of opened files
+    struct inode *pwd;      // inode, 当前工作目录
+    struct file *fd_array;  // open 的文件列表
+    int files_count;        // open 的文件的个数
     semaphore_t files_sem;  // lock protect sem
 };
 

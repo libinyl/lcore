@@ -233,6 +233,11 @@ copy_from_user(struct mm_struct *mm, void *dst, const void *src, size_t len, boo
     return 1;
 }
 
+/**
+ * 
+ * 
+ * 把数据从内核区复制到用户区
+ */ 
 bool
 copy_to_user(struct mm_struct *mm, void *dst, const void *src, size_t len) {
     if (!user_mem_check(mm, (uintptr_t)dst, len, 1)) {
@@ -262,15 +267,19 @@ check_vmm(void) {
     cprintf("check_vmm() succeeded.\n");
 }
 
+// https://chyyuu.gitbooks.io/ucore_os_docs/content/lab3/lab3_5_2_page_swapping_principles.html
+
 static void
 check_vma_struct(void) {
     size_t nr_free_pages_store = nr_free_pages();
 
+    // 1. ????????
     struct mm_struct *mm = mm_create();
     assert(mm != NULL);
 
     int step1 = 10, step2 = step1 * 10;
 
+    // 
     int i;
     for (i = step1; i >= 1; i --) {
         struct vma_struct *vma = vma_create(i * 5, i * 5 + 2, 0);
@@ -542,6 +551,8 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
 failed:
     return ret;
 }
+
+// 按页检查该虚拟空间是否属于用户态。防止用户进程向内核传递指向内核空间的指针。
 
 bool
 user_mem_check(struct mm_struct *mm, uintptr_t addr, size_t len, bool write) {

@@ -26,25 +26,44 @@ struct iobuf;
  * vfs_open() and vfs_close(). Code above the VFS layer should not
  * need to worry about it.
  */
+
+/*
+ * inode = index node, 就是文件的抽象表示, 是文件系统无关的接口.
+ * 
+ * 从文件系统的角度描述了一个目录项.
+ * 作用范围是整个 OS 空间
+ * 
+ * 
+ * inode 有两种类型: device 类型和 sfs_inode 类型.
+ * 
+ * 如果此结构中的 inode_type_device_info 值为 0x1234,
+ * 那么此 inode 的 in_info 成为一个 device 结构;
+ * 否则 in_info 是一个 sfs_inode 结构.
+ */ 
 struct inode {
-    union {
-        struct device __device_info;
-        struct sfs_inode __sfs_inode_info;
+    union {                                 // 用于屏蔽不同文件系统差异
+        struct device __device_info;        // 设备文件, 访问外围设备.对应设备文件系统内存inode信息
+        struct sfs_inode __sfs_inode_info;  // 常规文件, 对应SFS文件系统内存inode信息
     } in_info;
     enum {
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
-    } in_type;
-    int ref_count;
-    int open_count;
-    struct fs *in_fs;
-    const struct inode_ops *in_ops;
+    } in_type;                              // 此 inode 所属文件系统类型
+    int ref_count;                          // 此 inode 的引用计数
+    int open_count;                         // 打开此 inode 对应文件的个数
+    struct fs *in_fs;                       // 抽象的文件系统,包含访问文件系统的函数指针
+    const struct inode_ops *in_ops;         // 抽象的 inode 操作, 具体见 struct inode_ops
 };
 
 #define __in_type(type)                                             inode_type_##type##_info
 
 #define check_inode_type(node, type)                                ((node)->in_type == __in_type(type))
 
+
+/*
+ * 返回inode 的 info 的地址.
+ * 
+ */ 
 #define __vop_info(node, type)                                      \
     ({                                                              \
         struct inode *__node = (node);                              \
@@ -52,6 +71,7 @@ struct inode {
         &(__node->in_info.__##type##_info);                         \
      })
 
+// vop = vfs operation
 #define vop_info(node, type)                                        __vop_info(node, type)
 
 #define info2node(info, type)                                       \
@@ -74,11 +94,12 @@ void inode_kill(struct inode *node);
 #define VOP_MAGIC                           0x8c4ba476
 
 /*
- * Abstract operations on a inode.
+ * inode 抽象操作集合
  *
  * These are used in the form VOP_FOO(inode, args), which are macros
  * that expands to inode->inode_ops->vop_foo(inode, args). The operations
  * "foo" are:
+ ***************************************** 打开, 关闭, 回收
  *
  *    vop_open        - Called on open() of a file. Can be used to
  *                      reject illegal or undesired open modes. Note that
@@ -102,7 +123,7 @@ void inode_kill(struct inode *node);
  *                      this may be substantially after vop_lastclose is
  *                      called.
  *
- *****************************************
+ ***************************************** 读取, 写入, 获取目录项, 获取信息
  *
  *    vop_read        - Read data from file to uio, at offset specified
  *                      in the uio, updating uio_resid to reflect the
@@ -151,7 +172,7 @@ void inode_kill(struct inode *node);
  *                      Need not work on objects that are not
  *                      directories.
  *
- *****************************************
+ ***************************************** 创建
  *
  *    vop_creat       - Create a regular file named NAME in the passed
  *                      directory DIR. If boolean EXCL is true, fail if
@@ -159,7 +180,7 @@ void inode_kill(struct inode *node);
  *                      existing file if there is one. Hand back the
  *                      inode for the file as per vop_lookup.
  *
- *****************************************
+ ***************************************** 查找
  *
  *    vop_lookup      - Parse PATHNAME relative to the passed directory
  *                      DIR, and hand back the inode for the file it

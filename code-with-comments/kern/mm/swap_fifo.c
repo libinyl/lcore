@@ -25,6 +25,7 @@
  *              le2page (in memlayout.h), (in future labs: le2vma (in vmm.h), le2proc (in proc.h),etc.
  */
 
+// pra: page replace algorithm,内存置换算法
 list_entry_t pra_list_head;
 /*
  * (2) _fifo_init_mm: init pra_list_head and let  mm->sm_priv point to the addr of pra_list_head.
@@ -41,6 +42,7 @@ _fifo_init_mm(struct mm_struct *mm)
 /*
  * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head qeueue
  */
+// 将此页设置为可换出的,即加入到当前 mm 维护的可换出链表.每次加入都加入到紧邻头部的最新的位置.
 static int
 _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
 {
@@ -58,6 +60,7 @@ _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int
  *  (4)_fifo_swap_out_victim: According FIFO PRA, we should unlink the  earliest arrival page in front of pra_list_head qeueue,
  *                            then assign the value of *ptr_page to the addr of this page.
  */
+// 把 pra_list_head 队列中最早(最后一个,即 head->prev)的 page 移除,返回这个 page 的地址(出参)
 static int
 _fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
 {

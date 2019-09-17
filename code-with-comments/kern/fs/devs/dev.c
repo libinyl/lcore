@@ -6,6 +6,12 @@
 #include <unistd.h>
 #include <error.h>
 
+/**
+ * dev 级别的 io,以 ionode 为操作对象
+ * 
+ */ 
+
+
 /*
  * dev_open - Called for each open().
  */
@@ -147,7 +153,7 @@ static const struct inode_ops dev_node_ops = {
         dev_init_##x();                                 \
     } while (0)
 
-/* dev_init - Initialization functions for builtin vfs-level devices. */
+/* 初始化 builtin vfs 级别的设备, 即 stdin,stdout,disk0. */
 void
 dev_init(void) {
    // init_device(null);

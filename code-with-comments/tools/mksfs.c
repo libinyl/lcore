@@ -127,21 +127,21 @@ safe_fchdir(int fd) {
 }
 
 #define SFS_MAGIC                               0x2f8dbe2a
-#define SFS_NDIRECT                             12
-#define SFS_BLKSIZE                             4096                                    // 4K
-#define SFS_MAX_NBLKS                           (1024UL * 512)                          // 4K * 512K
+#define SFS_NDIRECT                             12                          // 
+#define SFS_BLKSIZE                             4096                        // 块大小 = 4KB
+#define SFS_MAX_NBLKS                           (1024UL * 512)              // 实际的文件系统块数最大值 = 4K * 512K. 原注释 4K*512K 是不是有问题? 如果按此宏计算,文件系统最大值为 1024*512*4KB = 2GB
 #define SFS_MAX_INFO_LEN                        31
 #define SFS_MAX_FNAME_LEN                       255
-#define SFS_MAX_FILE_SIZE                       (1024UL * 1024 * 128)                   // 128M
+#define SFS_MAX_FILE_SIZE                       (1024UL * 1024 * 128)       // 128M
 
-#define SFS_BLKBITS                             (SFS_BLKSIZE * CHAR_BIT)
+#define SFS_BLKBITS                             (SFS_BLKSIZE * CHAR_BIT)    // 每个块的bit数 = 4K * 8bit
 #define SFS_TYPE_FILE                           1
 #define SFS_TYPE_DIR                            2
 #define SFS_TYPE_LINK                           3
 
 #define SFS_BLKN_SUPER                          0
 #define SFS_BLKN_ROOT                           1
-#define SFS_BLKN_FREEMAP                        2
+#define SFS_BLKN_FREEMAP                        2                       // bitmap(freemap)的起始块号
 
 struct cache_block {
     uint32_t ino;
@@ -177,7 +177,7 @@ struct sfs_fs {
         struct subpath *next, *prev;
         char *subname;
     } __sp_nil, *sp_root, *sp_end;
-    int imgfd;
+    int imgfd;                                  // 在编译机上的目标 IMG 的 fd
     uint32_t ninos, next_ino;
     struct cache_inode *root;
     struct cache_inode *inodes[HASH_LIST_SIZE];
@@ -239,15 +239,21 @@ search_cache_inode(struct sfs_fs *sfs, ino_t real) {
     return ci;
 }
 
+/**
+ * 组装文件系统信息结构
+ */ 
 struct sfs_fs *
 create_sfs(int imgfd) {
+    // 1. 计算目标文件可容纳总块数 ninos,计算文件系统元数据区实际占用块数 next_ino.
     uint32_t ninos, next_ino;
     struct stat *stat = safe_fstat(imgfd);
+    // 总块数 = 编译机指定的目标IMG文件大小/块大小
     if ((ninos = stat->st_size / SFS_BLKSIZE) > SFS_MAX_NBLKS) {
         ninos = SFS_MAX_NBLKS;
         warn("img file is too big (%llu bytes, only use %u blocks).\n",
                 (unsigned long long)stat->st_size, ninos);
     }
+    // bitmap
     if ((next_ino = SFS_BLKN_FREEMAP + (ninos + SFS_BLKBITS - 1) / SFS_BLKBITS) >= ninos) {
         bug("img file is too small (%llu bytes, %u blocks, bitmap use at least %u blocks).\n",
                 (unsigned long long)stat->st_size, ninos, next_ino - 2);
@@ -255,6 +261,11 @@ create_sfs(int imgfd) {
 
     struct sfs_fs *sfs = safe_malloc(sizeof(struct sfs_fs));
     sfs->super.magic = SFS_MAGIC;
+
+    // /----- next_ino ----|-------- unused_blocks ---\
+    // ------------------------------------------------
+    // \------------------- ninos---------------------/
+
     sfs->super.blocks = ninos, sfs->super.unused_blocks = ninos - next_ino;
     snprintf(sfs->super.info, SFS_MAX_INFO_LEN, "simple file system");
 
@@ -303,6 +314,11 @@ subpath_show(FILE *fout, struct sfs_fs *sfs, const char *name) {
     fprintf(fout, "\n");
 }
 
+/**
+ * 向文件磁盘写入文件系统
+ * 
+ * 向 sfs->imgfd 的 ino 号块写入 data 数据的前 len 个字节.
+ */ 
 static void
 write_block(struct sfs_fs *sfs, void *data, size_t len, uint32_t ino) {
     assert(len <= SFS_BLKSIZE && ino < sfs->ninos);
@@ -330,16 +346,21 @@ flush_cache_inode(struct sfs_fs *sfs, struct cache_inode *ci) {
 
 void
 close_sfs(struct sfs_fs *sfs) {
+    // 1. 写入位图 freemap
+    //      buffer: 每个块的 bitmap
     static char buffer[SFS_BLKSIZE];
     uint32_t i, j, ino = SFS_BLKN_FREEMAP;
     uint32_t ninos = sfs->ninos, next_ino = sfs->next_ino;
+    // freemap 区域,每个循环处理一块的 bit
     for (i = 0; i < ninos; ino ++, i += SFS_BLKBITS) {
         memset(buffer, 0, sizeof(buffer));
+        // 对最后一块的处理
         if (i + SFS_BLKBITS > next_ino) {
             uint32_t start = 0, end = SFS_BLKBITS;
             if (i < next_ino) {
                 start = next_ino - i;
             }
+            // 至少要有一个空闲的 block
             if (i + SFS_BLKBITS > ninos) {
                 end = ninos - i;
             }
@@ -349,8 +370,10 @@ close_sfs(struct sfs_fs *sfs) {
                 data[j / bits] |= (1 << (j % bits));
             }
         }
+
         write_block(sfs, buffer, sizeof(buffer), ino);
     }
+    // 写入超级块
     write_block(sfs, &(sfs->super), sizeof(sfs->super), SFS_BLKN_SUPER);
 
     for (i = 0; i < HASH_LIST_SIZE; i ++) {

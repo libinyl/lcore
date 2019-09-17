@@ -1034,6 +1034,12 @@ init_main(void *arg) {
 
 // proc_init - set up the first kernel thread idleproc "idle" by itself and 
 //           - create the second kernel thread init_main
+
+/*
+ * 初始化进程环境
+ *  1. 创建 1st 内核进程 idleproc
+ *  2. 创建 2nd 内核进程 init_main
+ */
 void
 proc_init(void) {
     int i;

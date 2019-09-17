@@ -16,6 +16,11 @@
 #define IOBUF_SIZE                          4096
 
 /* copy_path - copy path name */
+
+/**
+ * 
+ * 复制文件路径字符串
+ */ 
 static int
 copy_path(char **to, const char *from) {
     struct mm_struct *mm = current->mm;
@@ -38,10 +43,13 @@ failed_cleanup:
 }
 
 /* sysfile_open - open file */
+// 打开文件的系统调用实现
+// 参数: 文件路径, flag
 int
 sysfile_open(const char *__path, uint32_t open_flags) {
     int ret;
     char *path;
+    // 为何要重新复制一次字符串?
     if ((ret = copy_path(&path, __path)) != 0) {
         return ret;
     }
@@ -57,6 +65,14 @@ sysfile_close(int fd) {
 }
 
 /* sysfile_read - read file */
+/**
+ * 
+ * 重点: 如何高效读取?
+ * 
+ * 1. 首先最基本的是要复制数据,copytouser.
+ * 2. 每次只复制一个缓冲区的大小.
+ * 
+ */ 
 int
 sysfile_read(int fd, void *base, size_t len) {
     struct mm_struct *mm = current->mm;
@@ -66,6 +82,7 @@ sysfile_read(int fd, void *base, size_t len) {
     if (!file_testfd(fd, 1, 0)) {
         return -E_INVAL;
     }
+    // 分配一个缓冲区,即是每次读取的最大单位
     void *buffer;
     if ((buffer = kmalloc(IOBUF_SIZE)) == NULL) {
         return -E_NO_MEM;
@@ -73,14 +90,17 @@ sysfile_read(int fd, void *base, size_t len) {
 
     int ret = 0;
     size_t copied = 0, alen;
+    // 循环每次读取一个 buffer
     while (len != 0) {
         if ((alen = IOBUF_SIZE) > len) {
             alen = len;
         }
+        // 调用文件系统函数读取到 buffer 中
         ret = file_read(fd, buffer, alen, &alen);
         if (alen != 0) {
             lock_mm(mm);
             {
+                // 从 buffer 复制到用户空间中
                 if (copy_to_user(mm, base, buffer, alen)) {
                     assert(len >= alen);
                     base += alen, len -= alen, copied += alen;

@@ -51,6 +51,10 @@ static inline uintptr_t rcr2(void) __attribute__((always_inline));
 static inline uintptr_t rcr3(void) __attribute__((always_inline));
 static inline void invlpg(void *addr) __attribute__((always_inline));
 
+// 汇编命令和参考: https://docs.oracle.com/cd/E19455-01/806-3773/6jct9o0aj/index.html
+
+// inb = input from port (Byte),
+// 从 port端口读取 1 个字节
 static inline uint8_t
 inb(uint16_t port) {
     uint8_t data;
@@ -64,7 +68,8 @@ inw(uint16_t port) {
     asm volatile ("inw %1, %0" : "=a" (data) : "d" (port));
     return data;
 }
-
+// 关于 insl: https://stackoverflow.com/a/38410917
+// 从输入端口 port 读取 cnt 个 dword 到 addr 处
 static inline void
 insl(uint32_t port, void *addr, int cnt) {
     asm volatile (
@@ -75,6 +80,8 @@ insl(uint32_t port, void *addr, int cnt) {
         : "memory", "cc");
 }
 
+// outb = output from port(byte)
+// 向 port 端口写入 1 个字节
 static inline void
 outb(uint16_t port, uint8_t data) {
     asm volatile ("outb %0, %1" :: "a" (data), "d" (port) : "memory");

@@ -8,6 +8,13 @@
 
 
 // open file in vfs, get/create inode for file with filename path.
+
+/**
+ * 功能: 返回指定路径的 inode.
+ * 参数: 路径,flag.
+ * 机制: 1. flag 校验 2. 
+ * 
+ */ 
 int
 vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     bool can_write = 0;

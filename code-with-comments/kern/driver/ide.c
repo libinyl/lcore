@@ -7,6 +7,19 @@
 #include <x86.h>
 #include <assert.h>
 
+/*
+ * 磁盘设备驱动
+ * 
+ * 
+ */ 
+
+
+/**
+ * ISA = Industry Standard Architecture
+ * 关于 ISA:
+ *  - 维基百科 : https://en.wikipedia.org/wiki/Industry_Standard_Architecture
+ *  - hardwarebook: http://www.hardwarebook.info/ISA
+ */ 
 #define ISA_DATA                0x00
 #define ISA_ERROR               0x01
 #define ISA_PRECOMP             0x01
@@ -18,6 +31,9 @@
 #define ISA_SDH                 0x06
 #define ISA_COMMAND             0x07
 #define ISA_STATUS              0x07
+
+// https://wiki.osdev.org/PCI_IDE_Controller
+// http://t13.org/Documents/UploadedDocuments/project/d1410r3b-ATA-ATAPI-6.pdf
 
 #define IDE_BSY                 0x80
 #define IDE_DRDY                0x40
@@ -35,6 +51,18 @@
 #define IDE_IDENT_CMDSETS       164
 #define IDE_IDENT_MAX_LBA       120
 #define IDE_IDENT_MAX_LBA_EXT   200
+
+// https://wiki.osdev.org/ATA_PIO_Mode#Primary.2FSecondary_Bus
+// http://www.cs.utexas.edu/~dahlin/Classes/UGOS/reading/ide.html
+// http://www.lemis.com/grog/echungadmesg.html
+// https://www.intel.com/content/www/us/en/support/articles/000005642/technologies.html
+// https://www.cse.huji.ac.il/~feit/papers/HighMCCLinux/extractedLnx/linux-2.5.34/drivers/ide/ide-pci.c_ide_setup_pci_device.c.html
+// pciide规范 1
+// https://www.bswd.com/pciide.pdf
+
+// linux: https://github.com/torvalds/linux/blob/master/drivers/ide/setup-pci.c
+// https://wenku.baidu.com/view/571f9c77951ea76e58fafab069dc5022abea4624.html
+// http://www.singlix.com/trdos/archive/code_archive/IDE_ATA_ATAPI_Tutorial.pdf
 
 #define IO_BASE0                0x1F0
 #define IO_BASE1                0x170
@@ -64,6 +92,9 @@ static struct ide_device {
     unsigned char model[41];    // Model in String
 } ide_devices[MAX_IDE];
 
+/* 
+ * 磁盘是否已经就绪?
+ */
 static int
 ide_wait_ready(unsigned short iobase, bool check_error) {
     int r;
@@ -75,6 +106,10 @@ ide_wait_ready(unsigned short iobase, bool check_error) {
     return 0;
 }
 
+/*
+ * 驱动层初始化
+ *      
+ */
 void
 ide_init(void) {
     static_assert((SECTSIZE % 4) == 0);
@@ -154,6 +189,26 @@ ide_device_size(unsigned short ideno) {
     return 0;
 }
 
+
+/**
+ * 
+ * 功能: 
+ *      以扇区为单位读取磁盘内容
+ * 参数: 
+ *      - 磁盘编号 ideno
+ *      - 扇区编号 secno
+ *      - 读取目的缓冲 dst
+ *      - 要读取的扇区数量 nsesc
+ * 校验: 
+ *      - 扇区数量合法
+ *      - 磁盘编号合法
+ *      - 扇区编号合法
+ * 
+ * 机制:
+ *      1. 向指定端口写入指定命令,触发控制器中断
+ *      2. 根据要读取的扇区数,把每个指定的扇区读取到
+ * 
+ */ 
 int
 ide_read_secs(unsigned short ideno, uint32_t secno, void *dst, size_t nsecs) {
     assert(nsecs <= MAX_NSECS && VALID_IDE(ideno));
@@ -172,10 +227,13 @@ ide_read_secs(unsigned short ideno, uint32_t secno, void *dst, size_t nsecs) {
     outb(iobase + ISA_COMMAND, IDE_CMD_READ);
 
     int ret = 0;
+    // 对于 nsec 个扇区中的每个,
     for (; nsecs > 0; nsecs --, dst += SECTSIZE) {
         if ((ret = ide_wait_ready(iobase, 1)) != 0) {
             goto out;
         }
+        // 从 iobase 读取 SECTSIZE 个字节,即一个扇区, 到 *dst 处.
+        // SECTSIZE / sizeof(uint32_t) 个 dword  = SECTSIZE 个字节
         insl(iobase, dst, SECTSIZE / sizeof(uint32_t));
     }
 
@@ -183,6 +241,7 @@ out:
     return ret;
 }
 
+// 写入到扇区, 与读取类似
 int
 ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t nsecs) {
     assert(nsecs <= MAX_NSECS && VALID_IDE(ideno));
@@ -205,6 +264,7 @@ ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t nse
         if ((ret = ide_wait_ready(iobase, 1)) != 0) {
             goto out;
         }
+        // 每次写入512 字节,即 1 个扇区
         outsl(iobase, src, SECTSIZE / sizeof(uint32_t));
     }
 
@@ -212,3 +272,9 @@ out:
     return ret;
 }
 
+
+/**
+ * 参考: 深入PCI与PCIe之一：硬件篇 - 老狼的文章 - 知乎
+https://zhuanlan.zhihu.com/p/26172972
+ * 
+ */ 

@@ -11,16 +11,27 @@ struct inode;
 struct stat;
 struct dirent;
 
+/*
+ * 文件,
+ * 
+ * 从进程的角度描述了一个进程在访问文件时需要了解的:
+ *  - 文件标识
+ *  - 文件读写的位置
+ *  - 文件引用情况
+ * 
+ * 作用范围是某一具体进程
+ */
 struct file {
     enum {
+        // 文件状态: 不存在/已初始化/已打开/已关闭
         FD_NONE, FD_INIT, FD_OPENED, FD_CLOSED,
     } status;
     bool readable;
     bool writable;
-    int fd;
-    off_t pos;
-    struct inode *node;
-    int open_count;
+    int fd;                 // 文件在 filemap 中的索引值
+    off_t pos;              // 当前位置
+    struct inode *node;     // 该文件对应的 inode 指针
+    int open_count;         // 打开此文件的次数
 };
 
 void fd_array_init(struct file *fd_array);

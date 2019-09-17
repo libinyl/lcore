@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "pmm.h": "c",
+        "__node_handle": "cpp",
+        "stdio.h": "c",
+        "string.h": "c",
+        "defs.h": "c",
+        "assert.h": "c"
+    }
+}

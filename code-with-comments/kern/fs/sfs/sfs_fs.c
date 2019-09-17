@@ -98,6 +98,8 @@ sfs_cleanup(struct fs *fs) {
 
 /*
  * sfs_init_read - used in sfs_do_mount to read disk block(blkno, 1) directly.
+ * 加载超级快,在函数 sfs_do_mount 中使用.
+ * 把给定的dev设备,从第 blkno 号 block 加载一个 block 到目标缓冲区 blk_buffer
  *
  * @dev:        the block device
  * @blkno:      the NO. of disk block
@@ -141,7 +143,10 @@ sfs_init_freemap(struct device *dev, struct bitmap *freemap, uint32_t blkno, uin
 
 /*
  * sfs_do_mount - mount sfs file system.
- *
+ * 挂载 sfs 文件系统
+ * 什么是挂载? 挂载就是,对于一个新的 device,创建一个新的 fs 结构,并添加到 boot fs中.
+ * 从硬盘加载 superblock 和 freemap.
+ * 
  * @dev:        the block device contains sfs file system
  * @fs_store:   the fs struct in memroy
  */
@@ -171,6 +176,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     }
 
     /* load and check superblock */
+    /* 加载&校验超级块 */
     if ((ret = sfs_init_read(dev, SFS_BLKN_SUPER, sfs_buffer)) != 0) {
         goto failed_cleanup_sfs_buffer;
     }
@@ -204,7 +210,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
         list_init(hash_list + i);
     }
 
-    /* load and check freemap */
+    /* 加载并校验 bitmap */
     struct bitmap *freemap;
     uint32_t freemap_size_nbits = sfs_freemap_bits(super);
     if ((sfs->freemap = freemap = bitmap_create(freemap_size_nbits)) == NULL) {

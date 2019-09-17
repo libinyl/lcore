@@ -7,6 +7,14 @@
 #include <sem.h>
 #include <unistd.h>
 
+
+/**
+ * ucore 中的普通文件.
+ * 
+ * 区别于设备文件device.
+ * 
+ */ 
+
 /*
  * Simple FS (SFS) definitions visible to ucore. This covers the on-disk format
  * and is used by tools that work on SFS volumes, such as mksfs.
@@ -28,44 +36,47 @@
 /* # of entries in a block */
 #define SFS_BLK_NENTRY                              (SFS_BLKSIZE / sizeof(uint32_t))
 
-/* file types */
+/* 文件类型 */
 #define SFS_TYPE_INVAL                              0       /* Should not appear on disk */
-#define SFS_TYPE_FILE                               1
-#define SFS_TYPE_DIR                                2
-#define SFS_TYPE_LINK                               3
+#define SFS_TYPE_FILE                               1       // 文件
+#define SFS_TYPE_DIR                                2       // 目录
+#define SFS_TYPE_LINK                               3       // 链接
 
 /*
  * On-disk superblock
+ * 超级块,作用范围是整个 OS 空间
  */
 struct sfs_super {
-    uint32_t magic;                                 /* magic number, should be SFS_MAGIC */
+    uint32_t magic;                                 /* magic number, = SFS_MAGIC */
     uint32_t blocks;                                /* # of blocks in fs */
     uint32_t unused_blocks;                         /* # of unused blocks in fs */
     char info[SFS_MAX_INFO_LEN + 1];                /* infomation for sfs  */
 };
 
 /* inode (on disk) */
+// 磁盘级的 inode, 可能是根目录
 struct sfs_disk_inode {
-    uint32_t size;                                  /* size of the file (in bytes) */
-    uint16_t type;                                  /* one of SYS_TYPE_* above */
-    uint16_t nlinks;                                /* # of hard links to this file */
-    uint32_t blocks;                                /* # of blocks */
-    uint32_t direct[SFS_NDIRECT];                   /* direct blocks */
-    uint32_t indirect;                              /* indirect blocks */
+    uint32_t size;                                  // 文件大小(byte)
+    uint16_t type;                                  // 文件类型, 如上 SFS_TYPE_xx
+    uint16_t nlinks;                                // 链接至此文件的hard链接数量
+    uint32_t blocks;                                // 文件 block 数
+    uint32_t direct[SFS_NDIRECT];                   /* 直接索引块 blocks */
+    uint32_t indirect;                              /* 间接索引块 blocks */
 //    uint32_t db_indirect;                           /* double indirect blocks */
 //   unused
 };
 
 /* file entry (on disk) */
+// 目录项. 一系列目录项组成路径.
 struct sfs_disk_entry {
     uint32_t ino;                                   /* inode number */
-    char name[SFS_MAX_FNAME_LEN + 1];               /* file name */
+    char name[SFS_MAX_FNAME_LEN + 1];               /* 文件名 */
 };
 
 #define sfs_dentry_size                             \
     sizeof(((struct sfs_disk_entry *)0)->name)
 
-/* inode for sfs */
+// SFS 的 inode,
 struct sfs_inode {
     struct sfs_disk_inode *din;                     /* on-disk inode */
     uint32_t ino;                                   /* inode number */
@@ -80,16 +91,17 @@ struct sfs_inode {
     to_struct((le), struct sfs_inode, member)
 
 /* filesystem for sfs */
+// SFS 文件系统结构体,描述 SFS 在硬盘上的整体分布
 struct sfs_fs {
-    struct sfs_super super;                         /* on-disk superblock */
-    struct device *dev;                             /* device mounted on */
-    struct bitmap *freemap;                         /* blocks in use are mared 0 */
+    struct sfs_super super;                         /* 超级块          on-disk superblock */
+    struct device *dev;                             /* 被挂载的设备     device mounted on */
+    struct bitmap *freemap;                         /* freemap, 空闲的 inode结构    blocks in use are mared 0 */
     bool super_dirty;                               /* true if super/freemap modified */
     void *sfs_buffer;                               /* buffer for non-block aligned io */
     semaphore_t fs_sem;                             /* semaphore for fs */
     semaphore_t io_sem;                             /* semaphore for io */
     semaphore_t mutex_sem;                          /* semaphore for link/unlink and rename */
-    list_entry_t inode_list;                        /* inode linked-list */
+    list_entry_t inode_list;                        /* 硬盘上所有的 inode   inode linked-list */
     list_entry_t *hash_list;                        /* inode hash linked-list */
 };
 

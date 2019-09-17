@@ -188,9 +188,10 @@ check_swap(void)
         count ++, total += p->property;
      }
      assert(total == nr_free_pages());
-     cprintf("BEGIN check_swap: count %d, total %d\n",count,total);
+     cprintf("BEGIN check_swap: count %d, total %d\n",count,total);// count: 连续空闲块数量 total: 空闲 page 数量
      
      //now we set the phy pages env     
+     // 1. 创建内存描述符
      struct mm_struct *mm = mm_create();
      assert(mm != NULL);
 
@@ -202,6 +203,7 @@ check_swap(void)
      pde_t *pgdir = mm->pgdir = boot_pgdir;
      assert(pgdir[0] == 0);
 
+     // 从 0X1000 到 (5+1)*0x1000
      struct vma_struct *vma = vma_create(BEING_CHECK_VALID_VADDR, CHECK_VALID_VADDR, VM_WRITE | VM_READ);
      assert(vma != NULL);
 

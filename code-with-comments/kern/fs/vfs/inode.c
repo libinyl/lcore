@@ -8,9 +8,10 @@
 #include <assert.h>
 #include <kmalloc.h>
 
-/* *
- * __alloc_inode - alloc a inode structure and initialize in_type
- * */
+/* 
+ * 分配一个 inode 结构,用于初始化指定类型的设备
+ * 
+ */
 struct inode *
 __alloc_inode(int type) {
     struct inode *node;

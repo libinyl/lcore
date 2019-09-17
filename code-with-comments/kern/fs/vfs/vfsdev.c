@@ -11,10 +11,13 @@
 #include <error.h>
 #include <assert.h>
 
-// device info entry in vdev_list 
+/* 
+ * [设备信息-inode]关系节点,
+ * 在 vdev_list 中维护.
+ */ 
 typedef struct {
-    const char *devname;
-    struct inode *devnode;
+    const char *devname;    
+    struct inode *devnode;  // 
     struct fs *fs;
     bool mountable;
     list_entry_t vdev_link;
@@ -23,7 +26,7 @@ typedef struct {
 #define le2vdev(le, member)                         \
     to_struct((le), vfs_dev_t, member)
 
-static list_entry_t vdev_list;     // device info list in vfs layer
+static list_entry_t vdev_list;     // vfs 层的设备信息链表
 static semaphore_t vdev_list_sem;
 
 static void
@@ -63,6 +66,8 @@ vfs_cleanup(void) {
 /*
  * vfs_get_root - Given a device name (stdin, stdout, etc.), hand
  *                back an appropriate inode.
+ * 
+ * 对于给定的设备名称, 返回一个合适的 inode
  */
 int
 vfs_get_root(const char *devname, struct inode **node_store) {
@@ -137,6 +142,10 @@ check_devname_conflict(const char *devname) {
 * to have a filesystem mounted on it, and a raw device will be created
 * for direct access.
 */
+/**
+ * 功能: 在 VFS 的设备表中添加新设备.
+ * 详解: 在 VFS 层添加名称为 devname,地址为 devnode 的设备.
+ */ 
 static int
 vfs_do_add(const char *devname, struct inode *devnode, struct fs *fs, bool mountable) {
     assert(devname != NULL);
@@ -217,6 +226,11 @@ find_mount(const char *devname, vfs_dev_t **vdev_store) {
 /*
  * vfs_mount - Mount a filesystem. Once we've found the device, call MOUNTFUNC to
  *             set up the filesystem and hand back a struct fs.
+ * 
+ * 功能: 挂载一个文件系统. 
+ * 详解: 把名为devname的设备通过函数 mountfunc 挂载到
+ * 
+ * 
  *
  * The DATA argument is passed through unchanged to MOUNTFUNC.
  */

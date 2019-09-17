@@ -45,7 +45,7 @@
 // then or in any of these:
 #define O_CREAT             0x00000004  // create file if it does not exist
 #define O_EXCL              0x00000008  // error if O_CREAT and the file exists
-#define O_TRUNC             0x00000010  // truncate file upon open
+#define O_TRUNC             0x00000010  // truncate file upon open,不可与只读共存
 #define O_APPEND            0x00000020  // append on each write
 // additonal related definition
 #define O_ACCMODE           3           // mask for O_RDONLY / O_WRONLY / O_RDWR

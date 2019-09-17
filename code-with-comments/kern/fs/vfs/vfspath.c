@@ -40,6 +40,7 @@ unlock_cfs(void) {
 
 /*
  *  vfs_get_curdir - Get current directory as a inode.
+ * 
  */
 int
 vfs_get_curdir(struct inode **dir_store) {

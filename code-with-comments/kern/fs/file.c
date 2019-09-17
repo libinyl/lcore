@@ -14,6 +14,7 @@
 #define testfd(fd)                          ((fd) >= 0 && (fd) < FILES_STRUCT_NENTRY)
 
 // get_fd_array - get current process's open files table
+// 获取当前进程的文件列表
 static struct file *
 get_fd_array(void) {
     struct files_struct *filesp = current->filesp;
@@ -33,6 +34,13 @@ fd_array_init(struct file *fd_array) {
 }
 
 // fs_array_alloc - allocate a free file item (with FD_NONE status) in open files table
+
+/**
+ * 在 *当前* 进程的文件列表中按查找一个*空闲*文件,即状态为FD_NONE,从未被打开的文件.
+ * 
+ * 如果指定了文件描述符fd,则在文件列表查找并返回.
+ * 如果找到的不是空闲状态也要报错.
+ */ 
 static int
 fd_array_alloc(int fd, struct file **file_store) {
 //    panic("debug");
@@ -73,6 +81,7 @@ fd_array_free(struct file *file) {
     file->status = FD_NONE;
 }
 
+// 增加引用计数
 static void
 fd_array_acquire(struct file *file) {
     assert(file->status == FD_OPENED);
@@ -89,7 +98,9 @@ fd_array_release(struct file *file) {
     }
 }
 
-// fd_array_open - file's open_count++, set status to FD_OPENED
+// fd_array_open 
+//      - file's open_count++
+//      - set status to FD_OPENED
 void
 fd_array_open(struct file *file) {
     assert(file->status == FD_INIT && file->node != NULL);
@@ -123,6 +134,9 @@ fd_array_dup(struct file *to, struct file *from) {
 }
 
 // fd2file - use fd as index of fd_array, return the array item (file)
+// 从 fd 到 file 的转换
+// 就是当前进程的文件描述块的 fdarray+fd.
+// fd 从数据结构的角度来讲就是当前进程打开的文件列表的偏移量
 static inline int
 fd2file(int fd, struct file **file_store) {
     if (testfd(fd)) {
@@ -136,6 +150,7 @@ fd2file(int fd, struct file **file_store) {
 }
 
 // file_testfd - test file is readble or writable?
+// 测试文件是否为指定的读写模式?
 bool
 file_testfd(int fd, bool readable, bool writable) {
     int ret;
@@ -153,8 +168,15 @@ file_testfd(int fd, bool readable, bool writable) {
 }
 
 // open file
+/*
+ * 1. 确定读写标志
+ * 2. 在进程的 filemap 中找一个空闲的fd,指向此文件,与此文件关联
+ * 
+ */ 
+
 int
 file_open(char *path, uint32_t open_flags) {
+    // 1. 获取读写标志
     bool readable = 0, writable = 0;
     switch (open_flags & O_ACCMODE) {
     case O_RDONLY: readable = 1; break;
@@ -168,10 +190,11 @@ file_open(char *path, uint32_t open_flags) {
 
     int ret;
     struct file *file;
+    // 2. 将当前进程与此文件关联
     if ((ret = fd_array_alloc(NO_FD, &file)) != 0) {
         return ret;
     }
-
+    // 
     struct inode *node;
     if ((ret = vfs_open(path, open_flags, &node)) != 0) {
         fd_array_free(file);
@@ -209,23 +232,33 @@ file_close(int fd) {
 }
 
 // read file
+/**
+ * 从文件 fd 处读取len 个字节到 base 处.
+ * len: 指定要读取的大小
+ * copied_store: 实际读取的大小
+ * 
+ */ 
 int
 file_read(int fd, void *base, size_t len, size_t *copied_store) {
     int ret;
     struct file *file;
     *copied_store = 0;
+    // fd --> file
     if ((ret = fd2file(fd, &file)) != 0) {
         return ret;
     }
     if (!file->readable) {
         return -E_INVAL;
     }
+    // 增加引用计数
     fd_array_acquire(file);
 
     struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
     ret = vop_read(file->node, iob);
 
     size_t copied = iobuf_used(iob);
+
+    // 转移文件状态, 调整文件指针偏移量
     if (file->status == FD_OPENED) {
         file->pos += copied;
     }

@@ -16,6 +16,9 @@ close(int fd) {
     return sys_close(fd);
 }
 
+/**
+ * 从 fd 读取len 个字节到 base
+ */ 
 int
 read(int fd, void *base, size_t len) {
     return sys_read(fd, base, len);

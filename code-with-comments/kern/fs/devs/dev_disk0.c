@@ -128,6 +128,11 @@ disk0_device_init(struct device *dev) {
     }
 }
 
+/**
+ * 功能:磁盘初始化.
+ * 机制: 创建 vfs-inode
+ * 
+ */ 
 void
 dev_init_disk0(void) {
     struct inode *node;

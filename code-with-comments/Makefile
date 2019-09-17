@@ -273,8 +273,9 @@ $(foreach p,$(USER_BINS),$(eval $(call fscopy,$(p),$(SFSROOT)$(SLASH))))
 $(SFSROOT):
 	$(V)$(MKDIR) $@
 
+# 在当前路径下创建一个 128MB 的文件 bin/sfs.img ,用于文件系统
 $(SFSIMG): $(SFSROOT) $(SFSBINS) | $(call totarget,mksfs)
-	$(V)dd if=/dev/zero of=$@ bs=1$(M) count=128
+	$(V)dd if=/dev/zero of=$@ bs=1$(M) count=128		
 	@$(call totarget,mksfs) $@ $(SFSROOT)
 
 $(call create_target,sfs.img)
