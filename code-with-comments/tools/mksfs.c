@@ -216,7 +216,11 @@ search_cache_block(struct sfs_fs *sfs, uint32_t ino) {
     }
     return cb;
 }
-
+/*
+ * 
+ * 
+ * 
+ */ 
 static struct cache_inode *
 alloc_cache_inode(struct sfs_fs *sfs, ino_t real, uint32_t ino, uint16_t type) {
     struct cache_inode *ci = safe_malloc(sizeof(struct cache_inode));
@@ -315,7 +319,7 @@ subpath_show(FILE *fout, struct sfs_fs *sfs, const char *name) {
 }
 
 /**
- * 向文件磁盘写入文件系统
+ * 向文件磁盘写入一整块.
  * 
  * 向 sfs->imgfd 的 ino 号块写入 data 数据的前 len 个字节.
  */ 

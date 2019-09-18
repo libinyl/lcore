@@ -13,6 +13,8 @@
 #define DISK0_DEV_NO        2
 #define DISK1_DEV_NO        3
 
+// fs.[hc] 将文件视为进程资源并从进程的视角对其管理
+
 void fs_init(void);
 void fs_cleanup(void);
 

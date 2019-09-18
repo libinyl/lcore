@@ -167,10 +167,10 @@ file_testfd(int fd, bool readable, bool writable) {
     return 1;
 }
 
-// open file
+// open file   path --> fd
 /*
  * 1. 确定读写标志
- * 2. 在进程的 filemap 中找一个空闲的fd,指向此文件,与此文件关联
+ * 2. 在进程的 filemap 中找一个空闲的fd,指向此文件,即将当前进程与此文件关联
  * 
  */ 
 

@@ -9,6 +9,8 @@
 #include <unistd.h>
 
 DIR dir, *dirp=&dir;
+
+// path -- > DIR
 DIR *
 opendir(const char *path) {
 

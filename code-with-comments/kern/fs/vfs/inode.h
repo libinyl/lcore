@@ -29,6 +29,8 @@ struct iobuf;
 
 /*
  * inode = index node, 就是文件的抽象表示, 是文件系统无关的接口.
+ * 文件 = 元数据 + 数据
+ * inode = 元数据 + 数据位置
  * 
  * 从文件系统的角度描述了一个目录项.
  * 作用范围是整个 OS 空间
@@ -187,6 +189,7 @@ void inode_kill(struct inode *node);
  *                      refers to. May destroy PATHNAME. Should increment
  *                      refcount on inode handed back.
  */
+//sfs_xxx 或 dev_xxx
 struct inode_ops {
     unsigned long vop_magic;
     int (*vop_open)(struct inode *node, uint32_t open_flags);
@@ -219,8 +222,13 @@ void inode_check(struct inode *node, const char *opstr);
         __node->in_ops->vop_##sym;                                                                  \
      })
 
+/**
+ * vop_xxx 是对 sfs_xxx 或 dev_xxx 的封装
+ * 
+ */ 
 #define vop_open(node, open_flags)                                  (__vop_op(node, open)(node, open_flags))
 #define vop_close(node)                                             (__vop_op(node, close)(node))
+// sfs_read, dev_read
 #define vop_read(node, iob)                                         (__vop_op(node, read)(node, iob))
 #define vop_write(node, iob)                                        (__vop_op(node, write)(node, iob))
 #define vop_fstat(node, stat)                                       (__vop_op(node, fstat)(node, stat))
@@ -235,7 +243,7 @@ void inode_check(struct inode *node, const char *opstr);
 #define vop_create(node, name, excl, node_store)                    (__vop_op(node, create)(node, name, excl, node_store))
 #define vop_lookup(node, path, node_store)                          (__vop_op(node, lookup)(node, path, node_store))
 
-
+// node --> info_fs
 #define vop_fs(node)                                                ((node)->in_fs)
 #define vop_init(node, ops, fs)                                     inode_init(node, ops, fs)
 #define vop_kill(node)                                              inode_kill(node)

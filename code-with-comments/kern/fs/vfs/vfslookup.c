@@ -82,17 +82,17 @@ get_device(char *path, char **subpath, struct inode **node_store) {
 /*
  * vfs_lookup - get the inode according to the path filename
  * 
- * 功能: 根据 path 查找对应的 inode.
- * 
+ * path --> inode
  */
 int
 vfs_lookup(char *path, struct inode **node_store) {
     int ret;
     struct inode *node;
-    // 
+    // path --> path1,最终文件所在的目录 inode
     if ((ret = get_device(path, &path, &node)) != 0) {
         return ret;
     }
+    // inode,path1 --> node_store
     if (*path != '\0') {
         ret = vop_lookup(node, path, node_store);
         vop_ref_dec(node);

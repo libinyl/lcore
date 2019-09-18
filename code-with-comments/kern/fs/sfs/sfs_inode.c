@@ -349,6 +349,9 @@ sfs_bmap_free_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index) 
  * @sin:      sfs inode in memory
  * @index:    the logical index of disk block in inode
  * @ino_store:the NO. of disk block
+ * 
+ * 在 SFS 文件系统上找到内存 sfs_inode 对应的索引值
+ * 
  */
 static int
 sfs_bmap_load_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index, uint32_t *ino_store) {
@@ -541,7 +544,9 @@ sfs_close(struct inode *node) {
 }
 
 /*  
- * sfs_io_nolock - Rd/Wr a file contentfrom offset position to offset+ length  disk blocks<-->buffer (in memroy)
+ * sfs_io_nolock - Rd/Wr a file content from offset position to offset+ length  disk blocks<-->buffer (in memroy)
+ * 以特定文件系统处理 io 操作
+ * 
  * @sfs:      sfs file system
  * @sin:      sfs inode in memory
  * @buf:      the buffer Rd/Wr
@@ -599,6 +604,11 @@ sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset
      * (3) If end position isn't aligned with the last block, Rd/Wr some content from begin to the (endpos % SFS_BLKSIZE) of the last block
 	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op	
 	*/
+
+
+    // 对于每种情况,都分两个步骤:
+    //  1. 获取索引值 ino
+    //  2. 使用此索引值进行 io 操作
     if ((blkoff = offset % SFS_BLKSIZE) != 0) {
         size = (nblks != 0) ? (SFS_BLKSIZE - blkoff) : (endpos - offset);
         if ((ret = sfs_bmap_load_nolock(sfs, sin, blkno, &ino)) != 0) {
@@ -646,10 +656,13 @@ out:
 /*
  * sfs_io - Rd/Wr file. the wrapper of sfs_io_nolock
             with lock protect
+            加锁的 sfs_io_nolock
  */
 static inline int
 sfs_io(struct inode *node, struct iobuf *iob, bool write) {
+    // inode --> sfs
     struct sfs_fs *sfs = fsop_info(vop_fs(node), sfs);
+    // inode --> sfs_inode
     struct sfs_inode *sin = vop_info(node, sfs_inode);
     int ret;
     lock_sin(sin);
@@ -665,6 +678,7 @@ sfs_io(struct inode *node, struct iobuf *iob, bool write) {
 }
 
 // sfs_read - read file
+// 以 inode 为操作对象读取
 static int
 sfs_read(struct inode *node, struct iobuf *iob) {
     return sfs_io(node, iob, 0);
@@ -970,9 +984,14 @@ out_unlock:
  * sfs_lookup - Parse path relative to the passed directory
  *              DIR, and hand back the inode for the file it
  *              refers to.
+ * 
+ * 返回对于给定 inode 的相对路径 path 指向的 inode.
+ * 
+ * 
  */
 static int
 sfs_lookup(struct inode *node, char *path, struct inode **node_store) {
+    // inode --> sfs
     struct sfs_fs *sfs = fsop_info(vop_fs(node), sfs);
     assert(*path != '\0' && *path != '/');
     vop_ref_inc(node);

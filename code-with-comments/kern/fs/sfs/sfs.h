@@ -54,14 +54,15 @@ struct sfs_super {
 };
 
 /* inode (on disk) */
-// 磁盘级的 inode, 可能是根目录
+// 磁盘级的 inode, 是根目录
+// 在 ucore 的实现中,inode 号就是 block 号
 struct sfs_disk_inode {
-    uint32_t size;                                  // 文件大小(byte)
+    uint32_t size;                                  // 此 inode 文件大小(byte)
     uint16_t type;                                  // 文件类型, 如上 SFS_TYPE_xx
-    uint16_t nlinks;                                // 链接至此文件的hard链接数量
-    uint32_t blocks;                                // 文件 block 数
-    uint32_t direct[SFS_NDIRECT];                   /* 直接索引块 blocks */
-    uint32_t indirect;                              /* 间接索引块 blocks */
+    uint16_t nlinks;                                // 此 inode 的hard链接数量
+    uint32_t blocks;                                // 此 inode 的 block 数
+    uint32_t direct[SFS_NDIRECT];                   // 直接数据块索引,有 12 个. 直接索引的数据页大小为 12 * 4k = 48k；
+    uint32_t indirect;                              // 一级间接索引块索引值. 值为 0 时表示不使用一级索引块. 使用一级间接块索引时, ucore 支持的最大文件大小为,12个直接块,加上 4KB 可以表示的 1K 整型这么多个块,即12*4K+1024*4K=48k+4m 
 //    uint32_t db_indirect;                           /* double indirect blocks */
 //   unused
 };
