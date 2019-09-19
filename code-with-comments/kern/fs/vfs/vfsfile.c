@@ -17,6 +17,7 @@
  */ 
 int
 vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
+    // 1. 确定读写等属性
     bool can_write = 0;
     switch (open_flags & O_ACCMODE) {
     case O_RDONLY:
@@ -40,14 +41,16 @@ vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     bool excl = (open_flags & O_EXCL) != 0;
     bool create = (open_flags & O_CREAT) != 0;
     ret = vfs_lookup(path, &node);
-
+    // ret=0 说明已经找到,否则考察是否创建
     if (ret != 0) {
         if (ret == -16 && (create)) {
             char *name;
             struct inode *dir;
+            // 要创建 node,首先要找到此路径所属的 dir 和名称
             if ((ret = vfs_lookup_parent(path, &dir, &name)) != 0) {
                 return ret;
             }
+            // 创建 inode并返回
             ret = vop_create(dir, name, excl, &node);
         } else return ret;
     } else if (excl && create) {

@@ -12,7 +12,7 @@
 #include <assert.h>
 
 /* 
- * [设备信息-inode]关系节点,
+ * [设备信息-devinode]关系节点,
  * 在 vdev_list 中维护.
  */ 
 typedef struct {
@@ -228,7 +228,8 @@ find_mount(const char *devname, vfs_dev_t **vdev_store) {
  *             set up the filesystem and hand back a struct fs.
  * 
  * 功能: 挂载一个文件系统. 
- * 详解: 把名为devname的设备通过函数 mountfunc 挂载到
+ * 详解: 把名为devname的设备通过函数 mountfunc 挂载到虚拟文件系统上来.
+ * 
  * 
  * 
  *

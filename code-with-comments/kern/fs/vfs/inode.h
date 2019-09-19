@@ -50,7 +50,7 @@ struct inode {
     enum {
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
-    } in_type;                              // 此 inode 所属文件系统类型
+    } in_type;                              // 此 inode 类型
     int ref_count;                          // 此 inode 的引用计数
     int open_count;                         // 打开此 inode 对应文件的个数
     struct fs *in_fs;                       // 抽象的文件系统,包含访问文件系统的函数指针

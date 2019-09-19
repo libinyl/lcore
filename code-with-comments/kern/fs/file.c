@@ -167,10 +167,9 @@ file_testfd(int fd, bool readable, bool writable) {
     return 1;
 }
 
-// open file   path --> fd
+// open file
 /*
- * 1. 确定读写标志
- * 2. 在进程的 filemap 中找一个空闲的fd,指向此文件,即将当前进程与此文件关联
+ * 为当前进程分配一个新的file,指向 path 对应的 inode.
  * 
  */ 
 
@@ -190,11 +189,11 @@ file_open(char *path, uint32_t open_flags) {
 
     int ret;
     struct file *file;
-    // 2. 将当前进程与此文件关联
+    // 2. 消耗当前进程的 fd,获取 file
     if ((ret = fd_array_alloc(NO_FD, &file)) != 0) {
         return ret;
     }
-    // 
+    // 3. path --> inode
     struct inode *node;
     if ((ret = vfs_open(path, open_flags, &node)) != 0) {
         fd_array_free(file);
@@ -212,6 +211,7 @@ file_open(char *path, uint32_t open_flags) {
         file->pos = stat->st_size;
     }
 
+    // 4. 完善当前进程的 file 状态
     file->node = node;
     file->readable = readable;
     file->writable = writable;

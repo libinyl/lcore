@@ -16,10 +16,12 @@ int ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t
 
 ## 2 从用户视角,文件系统至少要提供哪些抽象,即如何"方便"?
 
-- 文件(file), 本质是线性的字节序列.
+- 文件(file), 本质是线性的字节序列,是操作系统管理数据的单位
 - 目录(directory), 在用户看来是对深层文件或目录的链接.
 
 ## 3 从磁盘的持久化视角,逻辑上怎样组织文件数据?
+
+**inode 与 data block/dir block**
 
 - 文件的数据就是纯字节序列;目录的数据是一个数组,每个元素是一个键值对,即当前目录下的 ,<`inode`,`name`>,目录的数据被称为**目录项**(directory entry 或 dentry).
 - 采取索引法管理文件,即把文件或目录索引化,每个文件或目录的索引称为`inode`,放在元数据区, 具体数据放在数据区.
@@ -51,18 +53,21 @@ int ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t
 ![](/images/目录树的磁盘级表示2.png)
 
 
+**freemap**
 
-## 4 block 是一种资源,其状态也需要持久化维护.如何维护?
+block 是一种资源,其状态也需要持久化维护.通常使用`bitmap`来用最少的信息表示最多的状态.每个 `bit` 都表示了其对应的 block 的占用情况.在最开始每个 block 都是未占用的,故称其为`freemap`.
 
-通常使用`bitmap`来用最少的信息表示最多的状态.每个 `bit` 都表示了其对应的 block 的占用情况.在最开始每个 block 都是未占用的,故称其为`freemap`.
-
-## 5 每个持久化设备均应有其自己的文件系统格式.如何描述此文件系统?
-
-**超级块**.
+**superblock**
 
 我们把磁盘的第一块作为描述磁盘文件系统的"超级块".超级块通常会包含一个魔数,文件系统名称,以及整体的块数,未用到的块数等.
 
-对于 SFS,我们有:
+综合起来如图:
+
+![](/images/SFS&#32;磁盘组织.png)
+
+## 5 对于以上磁盘级的概念,SFS 分别有哪些数据结构一一对应?
+
+**超级块**.
 
 ```C
 struct sfs_super {
@@ -73,18 +78,174 @@ struct sfs_super {
 };
 ```
 
-## 5 基于以上描述,概括 SFS文件系统的元数据/数据组织方式.
+**bitmap**
 
-![](/images/SFS&#32;磁盘组织.png)
+```C
+struct bitmap {
+    uint32_t nbits;
+    uint32_t nwords;
+    WORD_TYPE *map;
+};
+```
+
+**inode:**
+
+```C
+struct sfs_disk_inode {
+    uint32_t size;                                  // 此 inode 文件大小(byte)
+    uint16_t type;                                  // 文件类型, 如上 SFS_TYPE_xx
+    uint16_t nlinks;                                // 此 inode 的hard链接数量
+    uint32_t blocks;                                // 此 inode 的 block 数
+    uint32_t direct[SFS_NDIRECT];                   // 直接数据块索引,有 12 个. 直接索引的数据页大小为 12 * 4k = 48k；
+    uint32_t indirect;                              // 一级间接索引块索引值. 值为 0 时表示不使用一级索引块. 使用一级间接块索引时, ucore 支持的最大文件大小为,12个直接块,加上 4KB 可以表示的 1K 整型这么多个块,即12*4K+1024*4K=48k+4m 
+};
+```
+
+**block**
+
+`blkno * SFS_BLKSIZE`
+
+**dir block**
+
+``` C
+// 即目录项
+struct sfs_disk_entry {
+    uint32_t ino;                                   /* inode number */
+    char name[SFS_MAX_FNAME_LEN + 1];               /* 文件名 */
+};
+```
+
+## 6 对于非磁盘文件,如设备文件,SFS 是怎样表示的?
+
+设备文件对应的结构体如下:
+
+```
+struct device {
+    size_t d_blocks;        // 设备占用的数据块的个数
+    size_t d_blocksize;     // 每个数据块的大小
+    // 以下是函数指针
+    int (*d_open)(struct device *dev, uint32_t open_flags);         // 打开设备
+    int (*d_close)(struct device *dev);                             // 关闭设备
+    int (*d_io)(struct device *dev, struct iobuf *iob, bool write); // 读写设备
+    int (*d_ioctl)(struct device *dev, int op, void *data);         // 用ioctl方式控制设备
+};
+```
+
+事实上,`vfs`中的`inode`与`SFS`中的`device`和`sfs_disk_inode`构成了接口-实现关系.(反向继承?)
+
+```
+VFS:        inode
+            ↗   ↖
+SFS:    device  sfs_disk_inode
+```
 
 
-## 6 SFS文件系统的加载
 
-系统开机,需要从磁盘加载磁盘文件的元数据,并解析到内存行程处理得到更有用的数据.需要在内存中维护哪些数据?
+## 7 VFS 的设计思路是什么?
+
+### 面向进程的文件
+
+作为(几乎)与进程直接打交道的部分,虚拟文件系统需要(在内核态)提供足够的抽象,不管`inode`什么类型,都抽象为`file`:
+
+```C
+struct file {
+    enum {
+        // 文件状态: 不存在/已初始化/已打开/已关闭
+        FD_NONE, FD_INIT, FD_OPENED, FD_CLOSED,
+    } status;
+    bool readable;
+    bool writable;
+    int fd;                 // 文件在 filemap 中的索引值
+    off_t pos;              // 当前位置
+    struct inode *node;     // 该文件对应的 inode 指针
+    int open_count;         // 打开此文件的次数
+};
+```
+
+**进程,文件描述符,文件,inode 四者之间的关系**
+
+![](/images/进程与文件数据结构.png)
+
+> 注: 参考`files_create`函数得知.
+
+inode 就是文件系统对不同文件系统的文件资源的统一抽象,避免了进程直接访问文件系统.
+
+### 统一文件系统
+
+虚拟文件系统存在的意义之一就是统一文件系统,因此自然要向下给出文件系统的接口:
+
+```C
+struct fs {
+    union {
+        struct sfs_fs __sfs_info;                   
+    } fs_info;                                     // filesystem-specific data 
+    enum {
+        fs_type_sfs_info,
+    } fs_type;                                     // 文件系统类型
+    int (*fs_sync)(struct fs *fs);                 // Flush all dirty buffers to disk 
+    struct inode *(*fs_get_root)(struct fs *fs);   // Return root inode of filesystem.
+    int (*fs_unmount)(struct fs *fs);              // Attempt unmount of filesystem.
+    void (*fs_cleanup)(struct fs *fs);             // Cleanup of filesystem.???
+};
+```
+
+对于 ucore 有唯一的实现:
+
+```C
+struct sfs_fs {
+    struct sfs_super super;                         /* 超级块          on-disk superblock */
+    struct device *dev;                             /* 被挂载的设备     device mounted on */
+    struct bitmap *freemap; 
+    ...
+```
+
+### 统一外设
+
+虚拟文件系统维护了设备列表`vdev_list`:
+
+![](/images/vdev_list.png)
+
+对于每种设备,都默认存在其文件系统.如果没有则为 `NULL`.**文件系统初始化的过程,也就是这个链表的初始化过程.** 简而言之,所有的所谓初始化过程都是**数据结构就位**的过程.
+
+## 7 文件系统初始化的过程是怎样的?
+
+整体来讲,在初始化阶段,SFS作为一种特定的文件系统被上层的虚拟文件系统**挂载**.虚拟系统向下提供了挂载方法接口`mountfunc`,在虚拟文件系统加载期间,会查找当前机器上运行的外设,一旦找到外设就会去加载其中的文件系统.SFS 作为特定文件系统,需要实现相关函数.为了了解 SFS 的具体实现,需要首先了解 **VFS**的生命周期,也就是**SFS的编程环境**,自顶向下地了解文件系统的初始化流程.
+
+在文件系统初始化之前,系统已经将 ide 磁盘设备初始化完毕.文件系统的初始化主干函数如下:
+
+```C
+void
+fs_init(void) {
+    vfs_init();
+    dev_init();
+    sfs_init();
+}
+```
+考察具体函数,暂时忽略并发因素,文件系统初始化过程如下:
+
+1. `VFS`通过`vfs_init`初始化一个设备列表`vdev_list`
+2. 调用ide 驱动层初始化设备`stdin`, `stdout`,`disk0`.对于设备的初始化步骤很统一,就是创建一个设备类型的 inode 并通过 devlist 维护起来,并配置好每种设备对应的操作函数.
+3. `SFS`初始化,主要是把 SFS 挂载到 VFS 的过程`sfs_do_mount`,即**新建`fs`对象并初始化每个字段,最终也添加到 `dev_list` 上的过程**.
+
+## 8 打开文件最终改变了什么状态, 过程是怎样的?
+
+**改变的状态** 当前进程新增一个 fd;此 fd 对应的 file 状态更新.
+
+**打开过程** 一言以蔽之,打开文件的过程就是:给当前进程分配一个新的文件,将这个文件与参数中 path 对应的 inode 关联起来.
+
+其中比较重要的过程就是,如何 getinode by path?这个过程主要由`vfs_lookup`负责.寻找思路是,调用每个文件系统各自实现的`fs_get_root`函数获取根 `inode`,以及sfs_lookup->sfs_lookup_once.
 
 
+## 9 SFS创建文件的流程是怎样的?
+
+当 `open`一个文件并指定了`O_CREATE`时最终会使这个文件存在.
+
+考察`sfs_create_inode`:
+
+## 10 SFS 与 VFS 是怎样衔接起来的?
 
 
+![](/images/VFS&#32;与&#32;SFS&#32;的衔接.png)
 
 
 ## 附 磁盘驱动层
@@ -180,7 +341,7 @@ kern/driver/ide.c
 
 ### 文件系统+磁盘区块
 
-![](/磁盘区块.png)
+![](/images/磁盘区块.png)
 
 ```
 superblock
@@ -201,9 +362,7 @@ https://github.com/qemu/qemu/blob/master/docs/qdev-device-use.txt
 
 ### 什么是初始化
 
-1. 元数据结构初始化,比如链表头初始化
-2. 函数指针就位,指向具体的函数
-3. 数据结构就位,可能涉及内存分配
+1. 数据结构就位,可能涉及内存分配
 
 
 ### inode 管理器 inode.[hc]

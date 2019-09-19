@@ -110,10 +110,16 @@ sfs_block_free(struct sfs_fs *sfs, uint32_t ino) {
 
 /*
  * sfs_create_inode - alloc a inode in memroy, and init din/ino/dirty/reclian_count/sem fields in sfs_inode in inode
+ * 
+ * sfs创建inode
+ * 
+ * 1. 分配内存 sfs_inode
+ * 2. 初始化此 inode 的所有状态
  */
 static int
 sfs_create_inode(struct sfs_fs *sfs, struct sfs_disk_inode *din, uint32_t ino, struct inode **node_store) {
     struct inode *node;
+    // 1. 分配新的 sfs_inode 内存
     if ((node = alloc_inode(sfs_inode)) != NULL) {
         vop_init(node, sfs_get_ops(din->type), info2fs(sfs, sfs));
         struct sfs_inode *sin = vop_info(node, sfs_inode);
@@ -985,7 +991,7 @@ out_unlock:
  *              DIR, and hand back the inode for the file it
  *              refers to.
  * 
- * 返回对于给定 inode 的相对路径 path 指向的 inode.
+ * 给定*根* inode 和 相对路径 path, 返回相应的 inode.
  * 
  * 
  */
