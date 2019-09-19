@@ -65,14 +65,7 @@ sysfile_close(int fd) {
 }
 
 /* sysfile_read - read file */
-/**
- * 
- * 重点: 如何高效读取?
- * 
- * 1. 首先最基本的是要复制数据,copytouser.
- * 2. 每次只复制一个缓冲区的大小.
- * 
- */ 
+
 int
 sysfile_read(int fd, void *base, size_t len) {
     struct mm_struct *mm = current->mm;
@@ -95,12 +88,12 @@ sysfile_read(int fd, void *base, size_t len) {
         if ((alen = IOBUF_SIZE) > len) {
             alen = len;
         }
-        // 调用文件系统函数读取到 buffer 中
+        // 1. fd 读取到-->  buffer
         ret = file_read(fd, buffer, alen, &alen);
         if (alen != 0) {
             lock_mm(mm);
             {
-                // 从 buffer 复制到用户空间中
+                //  2. buffer 复制到--> user addr
                 if (copy_to_user(mm, base, buffer, alen)) {
                     assert(len >= alen);
                     base += alen, len -= alen, copied += alen;

@@ -7,6 +7,11 @@
  * iobuf is a buffer Rd/Wr status record
  * 
  * io buffer : 读写状态记录器
+ * 
+ * io_base  : 目标写入地址
+ * io_len   : buffer 长度
+ * io_resid : 通过一次 IO 传输数据的总长度
+ * io_offset: 当前传输的偏移量
  */
 struct iobuf {
     void *io_base;     // the base addr of buffer (used for Rd/Wr)
