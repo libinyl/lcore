@@ -199,8 +199,9 @@ file_open(char *path, uint32_t open_flags) {
         fd_array_free(file);
         return ret;
     }
-
+    // 默认偏移量为 0.即空文件.
     file->pos = 0;
+    // 如果指明O_APPEND则把偏移量设置为内存区域末端
     if (open_flags & O_APPEND) {
         struct stat __stat, *stat = &__stat;
         if ((ret = vop_fstat(node, stat)) != 0) {
@@ -233,9 +234,10 @@ file_close(int fd) {
 
 // read file
 /**
- * 从文件 fd 处读取len 个字节到 base 处.
- * len: 指定要读取的大小
- * copied_store: 实际读取的大小
+ * 端点: 文件fd中的 pos / 内存地址base
+ * 方向: 文件->内存地址
+ * 单位: 字节
+ * 数量: len
  * 
  */ 
 int
@@ -252,7 +254,8 @@ file_read(int fd, void *base, size_t len, size_t *copied_store) {
     }
     // 增加引用计数
     fd_array_acquire(file);
-
+    // file->node --> buffer
+    // 建立一个缓冲区控制器.这个缓冲区控制器作为代理.
     struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
     ret = vop_read(file->node, iob);
 

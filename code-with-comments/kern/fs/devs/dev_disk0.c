@@ -10,11 +10,11 @@
 #include <error.h>
 #include <assert.h>
 
-#define DISK0_BLKSIZE                   PGSIZE
-#define DISK0_BUFSIZE                   (4 * DISK0_BLKSIZE)
-#define DISK0_BLK_NSECT                 (DISK0_BLKSIZE / SECTSIZE)
+#define DISK0_BLKSIZE                   PGSIZE                      // 每个块的byte数
+#define DISK0_BUFSIZE                   (4 * DISK0_BLKSIZE)         // 磁盘模块缓冲区byte 数
+#define DISK0_BLK_NSECT                 (DISK0_BLKSIZE / SECTSIZE)  // 每个块占的扇区数(=8)
 
-static char *disk0_buffer;
+static char *disk0_buffer;      // 磁盘IO的缓存,4 个 block 大小
 static semaphore_t disk0_sem;
 
 static void
@@ -37,6 +37,11 @@ disk0_close(struct device *dev) {
     return 0;
 }
 
+/**
+ * (未加锁地)从默认磁盘的第 blkno 号块开始加载 nblks 个块到 缓存 disk0_buffer 中.
+ * 
+ * 把 以扇区为单位的 IO 封装为->以块为单位的 IO
+ */ 
 static void
 disk0_read_blks_nolock(uint32_t blkno, uint32_t nblks) {
     int ret;
@@ -47,6 +52,9 @@ disk0_read_blks_nolock(uint32_t blkno, uint32_t nblks) {
     }
 }
 
+/**
+ * 向默认磁盘的第blkno块写入 buffer 中 nblks 块的数据
+ */ 
 static void
 disk0_write_blks_nolock(uint32_t blkno, uint32_t nblks) {
     int ret;
@@ -57,10 +65,17 @@ disk0_write_blks_nolock(uint32_t blkno, uint32_t nblks) {
     }
 }
 
+/**
+ * 磁盘 IO,面向 device <--> iob 的 IO
+ *
+ * 角色: 磁盘设备 dev , 内存缓冲区 iob
+ * 
+ * 
+ */ 
 static int
 disk0_io(struct device *dev, struct iobuf *iob, bool write) {
-    off_t offset = iob->io_offset;
-    size_t resid = iob->io_resid;
+    off_t offset = iob->io_offset;          // 模拟磁盘的目标范围起始地址
+    size_t resid = iob->io_resid;           // 模拟磁盘的目标范围偏移量
     uint32_t blkno = offset / DISK0_BLKSIZE;
     uint32_t nblks = resid / DISK0_BLKSIZE;
 
@@ -82,18 +97,24 @@ disk0_io(struct device *dev, struct iobuf *iob, bool write) {
     lock_disk0();
     while (resid != 0) {
         size_t copied, alen = DISK0_BUFSIZE;
+        // 写入磁盘
         if (write) {
+            //1. iob -> disk0_buffer
             iobuf_move(iob, disk0_buffer, alen, 0, &copied);
             assert(copied != 0 && copied <= resid && copied % DISK0_BLKSIZE == 0);
             nblks = copied / DISK0_BLKSIZE;
+            //2. disk0_buffer->刷入磁盘
             disk0_write_blks_nolock(blkno, nblks);
         }
+        // 读取磁盘
         else {
             if (alen > resid) {
                 alen = resid;
             }
             nblks = alen / DISK0_BLKSIZE;
+            // 把操作量每次按disk0_buffer分割,每次只从磁盘读取一个缓冲区disk0_buffer的量
             disk0_read_blks_nolock(blkno, nblks);
+            // 从磁盘级模块缓冲复制到上层缓冲
             iobuf_move(iob, disk0_buffer, alen, 1, &copied);
             assert(copied == alen && copied % DISK0_BLKSIZE == 0);
         }
@@ -108,6 +129,12 @@ disk0_ioctl(struct device *dev, int op, void *data) {
     return -E_UNIMP;
 }
 
+/**
+ * 磁盘模块初始化
+ * 
+ * 1. dev 函数指针 就位
+ * 2. 初始化 disk0_buffer 结构,
+ */ 
 static void
 disk0_device_init(struct device *dev) {
     static_assert(DISK0_BLKSIZE % SECTSIZE == 0);
@@ -123,6 +150,7 @@ disk0_device_init(struct device *dev) {
     sem_init(&(disk0_sem), 1);
 
     static_assert(DISK0_BUFSIZE % DISK0_BLKSIZE == 0);
+    // 初始化磁盘 buffer
     if ((disk0_buffer = kmalloc(DISK0_BUFSIZE)) == NULL) {
         panic("disk0 alloc buffer failed.\n");
     }

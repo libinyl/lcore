@@ -229,6 +229,14 @@ void inode_check(struct inode *node, const char *opstr);
 #define vop_open(node, open_flags)                                  (__vop_op(node, open)(node, open_flags))
 #define vop_close(node)                                             (__vop_op(node, close)(node))
 // sfs_read, dev_read
+
+
+/**
+ * 角色: 平台无关的inode,iobuffer
+ * 方向: inode-->iobuffer
+ * 单位: 
+ * 
+ */ 
 #define vop_read(node, iob)                                         (__vop_op(node, read)(node, iob))
 #define vop_write(node, iob)                                        (__vop_op(node, write)(node, iob))
 #define vop_fstat(node, stat)                                       (__vop_op(node, fstat)(node, stat))

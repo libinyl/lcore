@@ -1,15 +1,5 @@
 # ucore Lab8 实验笔记
 
-## 0 磁盘提供了怎样的读写接口?
-
-磁盘以扇区号为寻址坐标,每次以扇区为单位读写数据,最少读写一个扇区.
-
-```
-// ide.h
-int ide_read_secs(unsigned short ideno, uint32_t secno, void *dst, size_t nsecs);
-int ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t nsecs);
-```
-
 ## 1 文件系统的职责是什么?
 
 高效地/可靠地/安全地/方便地 管理用户的持久化数据.
@@ -247,6 +237,17 @@ fs_init(void) {
 
 ![](/images/VFS&#32;与&#32;SFS&#32;的衔接.png)
 
+## io_buffer 是什么?
+
+陈老师另外的一个实现有较为详细的注释:
+
+https://github.com/chyyuu/ucore-x64-with-golang/blob/master/ucore/src/kern-ucore/fs/iobuf.h
+
+
+![](/images/iobuf&#32;与&#32;disk0_buffer.png)
+
+
+
 
 ## 附 磁盘驱动层
 
@@ -346,37 +347,6 @@ kern/driver/ide.c
 ```
 superblock
 ```
-
-### 不变量
-
-设备: 磁盘设备,标准输入(键盘),标准输出(console)
-
-https://qemu.weilnetz.de/doc/qemu-doc.html
-
-QEMUOPTS = -hda $(UCOREIMG) 
--drive file=$(SWAPIMG),media=disk,cache=writeback 
--drive file=$(SFSIMG),media=disk,cache=writeback 
-
-https://wiki.gentoo.org/wiki/QEMU/Options#Hard_drive
-https://github.com/qemu/qemu/blob/master/docs/qdev-device-use.txt
-
-### 什么是初始化
-
-1. 数据结构就位,可能涉及内存分配
-
-
-### inode 管理器 inode.[hc]
-
-### 子知识
-
-- 假设每个设备有其自己的文件系统.
-- 文件系统有两类: boot filesystem,和其他系统启动后其他设备上的文件系统.
-- inode 是资源单位
-- 磁盘的寻址单位是扇区编号
-
-### 进程读文件
-
-- 获取字节所在的数据块
 
 ### 参考资料
 

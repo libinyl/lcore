@@ -24,7 +24,13 @@ iobuf_init(struct iobuf *iob, void *base, size_t len, off_t offset) {
  * iobuf_move may be called repeatedly on the same io to transfer
  * additional data until the available buffer space the io refers to
  * is exhausted.
+ * 
+ * iobuffer 与 内存 data 之间的数据转移(复制)
+ * 
+ * 若m2b=0,则从内存 buffer到设备 data
+ * 若 m2b=1,则从设备data到内存 buffer
  */
+//iobuf_move(iob, disk0_buffer, alen, 1, &copied);
 int
 iobuf_move(struct iobuf *iob, void *data, size_t len, bool m2b, size_t *copiedp) {
     size_t alen;
@@ -68,6 +74,7 @@ iobuf_move_zeros(struct iobuf *iob, size_t len, size_t *copiedp) {
 
 /*
  * iobuf_skip - change the current position of io buffer
+ * iobuf向高地址方向移动 n 个字节.
  */
 void
 iobuf_skip(struct iobuf *iob, size_t n) {

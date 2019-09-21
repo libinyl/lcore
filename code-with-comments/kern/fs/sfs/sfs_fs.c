@@ -13,8 +13,40 @@
 #include <error.h>
 #include <assert.h>
 
+
+// 来自 OS161.
 /*
  * sfs_sync - sync sfs's superblock and freemap in memroy into disk
+ */
+
+/*
+ * Get the sfs_fs from the generic abstract fs.
+ *
+ * Note that the abstract struct fs, which is all the VFS
+ * layer knows about, is actually a member of struct sfs_fs.
+ * The pointer in the struct fs points back to the top of the
+ * struct sfs_fs - essentially the same object. This can be a
+ * little confusing at first.
+ *
+ * The following diagram may help:
+ *
+ *     struct sfs_fs        <-----------------\
+ *           :                                |
+ *           :   sfs_absfs (struct fs)        |   <------\
+ *           :      :                         |          |
+ *           :      :  various members        |          |
+ *           :      :                         |          |
+ *           :      :  fs_info(__sfs_info) ---/          |
+ *           :      :                             ...|...
+ *           :                                   .  VFS  .
+ *           :                                   . layer . 
+ *           :   other members                    .......
+ *           :                                    
+ *           :
+ *
+ * This construct is repeated with inodes and devices and other
+ * similar things all over the place in ucore, so taking the
+ * time to straighten it out in your mind is worthwhile.
  */
 static int
 sfs_sync(struct fs *fs) {
@@ -98,7 +130,7 @@ sfs_cleanup(struct fs *fs) {
 
 /*
  * sfs_init_read - used in sfs_do_mount to read disk block(blkno, 1) directly.
- * 加载超级快,在函数 sfs_do_mount 中使用.
+ * 加载超级块,在函数 sfs_do_mount 中使用.
  * 把给定的dev设备,从第 blkno 号 block 加载一个 block 到目标缓冲区 blk_buffer
  *
  * @dev:        the block device

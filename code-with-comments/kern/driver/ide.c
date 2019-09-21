@@ -199,10 +199,6 @@ ide_device_size(unsigned short ideno) {
  *      - 扇区编号 secno
  *      - 读取目的缓冲 dst
  *      - 要读取的扇区数量 nsesc
- * 校验: 
- *      - 扇区数量合法
- *      - 磁盘编号合法
- *      - 扇区编号合法
  * 
  * 机制:
  *      1. 向指定端口写入指定命令,触发控制器中断
@@ -241,7 +237,8 @@ out:
     return ret;
 }
 
-// 写入到扇区, 与读取类似
+// 以扇区为单位写入
+// 从 src,向ideno号设备的第secno号扇区转移nsecs个扇区的数据.
 int
 ide_write_secs(unsigned short ideno, uint32_t secno, const void *src, size_t nsecs) {
     assert(nsecs <= MAX_NSECS && VALID_IDE(ideno));

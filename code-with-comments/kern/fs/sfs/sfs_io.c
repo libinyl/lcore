@@ -6,7 +6,7 @@
 #include <bitmap.h>
 #include <assert.h>
 
-//Basic block-level I/O routines
+// block 级的 IO 函数.sfs 向下的管理操作集
 
 /* sfs_rwblock_nolock - Basic block-level I/O routine for Rd/Wr one disk block,
  *                      without lock protect for mutex process on Rd/Wr disk block
@@ -15,10 +15,19 @@
  * @blkno: the NO. of disk block
  * @write: BOOL: Read or Write
  * @check: BOOL: if check (blono < sfs super.blocks)
+ * 
+ * 在设备和内核内存间移动 1 块.
+ * 
+ * 角色: sfs,buf
+ * 端点地址: sfs->dev->blkno * SFS_BLKSIZE,buf
+ * 方向: 参数指定
+ * 单位: 块
+ * 数量: 1
  */
 static int
 sfs_rwblock_nolock(struct sfs_fs *sfs, void *buf, uint32_t blkno, bool write, bool check) {
     assert((blkno != 0 || !check) && blkno < sfs->super.blocks);
+    //iobuf_init(struct iobuf *iob, void *base, size_t len, off_t offset)
     struct iobuf __iob, *iob = iobuf_init(&__iob, buf, SFS_BLKSIZE, blkno * SFS_BLKSIZE);
     return dop_io(sfs->dev, iob, write);
 }
@@ -30,6 +39,13 @@ sfs_rwblock_nolock(struct sfs_fs *sfs, void *buf, uint32_t blkno, bool write, bo
  * @blkno: the NO. of disk block
  * @nblks: Rd/Wr number of disk block
  * @write: BOOL: Read - 0 or Write - 1
+ * 
+ * 在设备和内存间移动 n 块.所以要加锁.
+ * 
+ * 角色: sfs,buf
+ * 方向:参数指定
+ * 单位: 块
+ * 数量: nblks
  */
 static int
 sfs_rwblock(struct sfs_fs *sfs, void *buf, uint32_t blkno, uint32_t nblks, bool write) {

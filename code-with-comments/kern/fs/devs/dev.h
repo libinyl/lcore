@@ -25,6 +25,7 @@ struct device {
 
 #define dop_open(dev, open_flags)           ((dev)->d_open(dev, open_flags))
 #define dop_close(dev)                      ((dev)->d_close(dev))
+// 设备操作 IO 接口
 #define dop_io(dev, iob, write)             ((dev)->d_io(dev, iob, write))
 #define dop_ioctl(dev, op, data)            ((dev)->d_ioctl(dev, op, data))
 

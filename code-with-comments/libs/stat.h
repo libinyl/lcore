@@ -3,6 +3,9 @@
 
 #include <defs.h>
 
+/**
+ * 文件信息
+ */ 
 struct stat {
     uint32_t st_mode;                   // protection mode and file type
     size_t st_nlinks;                   // number of hard links

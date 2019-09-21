@@ -253,6 +253,7 @@ failed_cleanup:
 /*
  * sfs_bmap_get_nolock - according sfs_inode and index of block, find the NO. of disk block
  *                       no lock protect
+ * 基于 sfs_inode 和 block 索引,找到
  * @sfs:      sfs file system
  * @sin:      sfs inode in memory
  * @index:    the index of block in inode
@@ -551,7 +552,7 @@ sfs_close(struct inode *node) {
 
 /*  
  * sfs_io_nolock - Rd/Wr a file content from offset position to offset+ length  disk blocks<-->buffer (in memroy)
- * 以特定文件系统处理 io 操作
+ * 内存级-面向缓冲区的 IO
  * 
  * @sfs:      sfs file system
  * @sin:      sfs inode in memory
@@ -663,7 +664,13 @@ out:
  * sfs_io - Rd/Wr file. the wrapper of sfs_io_nolock
             with lock protect
             加锁的 sfs_io_nolock
+
+
+
  */
+/**
+ * 
+ */ 
 static inline int
 sfs_io(struct inode *node, struct iobuf *iob, bool write) {
     // inode --> sfs
@@ -684,7 +691,9 @@ sfs_io(struct inode *node, struct iobuf *iob, bool write) {
 }
 
 // sfs_read - read file
-// 以 inode 为操作对象读取
+/**
+ * 角色: sfs_inode, iobuffer
+ */ 
 static int
 sfs_read(struct inode *node, struct iobuf *iob) {
     return sfs_io(node, iob, 0);
