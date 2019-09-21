@@ -36,11 +36,11 @@
 
 如上文件树的磁盘级表示如下图:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/%E7%9B%AE%E5%BD%95%E6%A0%91%E7%9A%84%E7%A3%81%E7%9B%98%E7%BA%A7%E8%A1%A8%E7%A4%BA1.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/%E7%9B%AE%E5%BD%95%E6%A0%91%E7%9A%84%E7%A3%81%E7%9B%98%E7%BA%A7%E8%A1%A8%E7%A4%BA1.png?raw=true)
 
 把位置稍作调整即可更清晰地看出内在关系:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/目录树的磁盘级表示2.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/目录树的磁盘级表示2.png?raw=true)
 
 
 **freemap**
@@ -53,7 +53,7 @@ block 是一种资源,其状态也需要持久化维护.通常使用`bitmap`来�
 
 综合起来如图:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/SFS&#32;磁盘组织.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/SFS&#32;磁盘组织.png?raw=true)
 
 ## 5 对于以上磁盘级的概念,SFS 分别有哪些数据结构一一对应?
 
@@ -154,7 +154,7 @@ struct file {
 
 **进程,文件描述符,文件,inode 四者之间的关系**
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/进程与文件数据结构.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/进程与文件数据结构.png?raw=true)
 
 > 注: 参考`files_create`函数得知.
 
@@ -193,7 +193,7 @@ struct sfs_fs {
 
 虚拟文件系统维护了设备列表`vdev_list`:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/vdev_list.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/vdev_list.png?raw=true)
 
 对于每种设备,都默认存在其文件系统.如果没有则为 `NULL`.**文件系统初始化的过程,也就是这个链表的初始化过程.** 简而言之,所有的所谓初始化过程都是**数据结构就位**的过程.
 
@@ -235,7 +235,7 @@ fs_init(void) {
 ## 10 SFS 与 VFS 是怎样衔接起来的?
 
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/VFS&#32;与&#32;SFS&#32;的衔接.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/VFS&#32;与&#32;SFS&#32;的衔接.png?raw=true)
 
 ## io_buffer 是什么?
 
@@ -244,7 +244,7 @@ fs_init(void) {
 https://github.com/chyyuu/ucore-x64-with-golang/blob/master/ucore/src/kern-ucore/fs/iobuf.h
 
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/iobuf&#32;与&#32;disk0_buffer.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/iobuf&#32;与&#32;disk0_buffer.png?raw=true)
 
 
 
@@ -253,7 +253,7 @@ https://github.com/chyyuu/ucore-x64-with-golang/blob/master/ucore/src/kern-ucore
 
 一个理想的 IO 设备是什么样子的,向上层提供了什么接口?
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/Canonical&#32;Device.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/Canonical&#32;Device.png?raw=true)
 
 一个简化的设备接口提供 3 个寄存器:
 
@@ -336,13 +336,13 @@ kern/driver/ide.c
 
 详细如图:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/文件系统架构.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/文件系统架构.png?raw=true)
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/文件系统设计图.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/文件系统设计图.png?raw=true)
 
 ### 文件系统+磁盘区块
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/磁盘区块.png?raw=1)
+![](https://github.com/libinyl/ucore-study/blob/master/images/磁盘区块.png?raw=true)
 
 ```
 superblock
