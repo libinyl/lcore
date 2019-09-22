@@ -59,7 +59,7 @@ struct proc_struct {
     list_entry_t hash_link;                     // Process hash list
     int exit_code;                              // exit code (be sent to parent proc)
     uint32_t wait_state;                        // waiting state
-    struct proc_struct *cptr, *yptr, *optr;     // relations between processes
+    struct proc_struct *cptr, *yptr, *optr;     // children, younger,older relations between processes
     struct run_queue *rq;                       // running queue contains Process
     list_entry_t run_link;                      // the entry linked in run queue
     int time_slice;                             // time slice for occupying the CPU

@@ -2,6 +2,23 @@
 
 **目的** 实现CPU 的虚拟化,让ucore 分时共享 CPU,实现多条控制流并发执行.
 
+## 整体视角
+
+## 怎样区分内核进程和用户进程?
+
+栈空间不同.
+
+`idle`: 没有 `trapframe`;`kstack`=`bootstack`
+`init`
+
+进程名称    trapframe   kstack
+"idle"  NULL    bootstack
+"init"  tf_cs = KERNEL_CS;tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
+
+
+内核栈基址: `bootstack`
+用户进程栈基址: 新申请的 page.见`setup_kstack()`.
+
 ## 数据结构
 
 - 内核线程控制块

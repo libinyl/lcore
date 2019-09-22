@@ -40,7 +40,7 @@
 
 把位置稍作调整即可更清晰地看出内在关系:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/目录树的磁盘级表示2.png?raw=true)
+![](https://github.com/libinyl/ucore-study/blob/master/images/%E7%9B%AE%E5%BD%95%E6%A0%91%E7%9A%84%E7%A3%81%E7%9B%98%E7%BA%A7%E8%A1%A8%E7%A4%BA2.png?raw=true)
 
 
 **freemap**
@@ -53,7 +53,7 @@ block 是一种资源,其状态也需要持久化维护.通常使用`bitmap`来�
 
 综合起来如图:
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/SFS&#32;磁盘组织.png?raw=true)
+![](https://github.com/libinyl/ucore-study/blob/master/images/SFS%20%E7%A3%81%E7%9B%98%E7%BB%84%E7%BB%87.png?raw=true)
 
 ## 5 对于以上磁盘级的概念,SFS 分别有哪些数据结构一一对应?
 
@@ -235,7 +235,7 @@ fs_init(void) {
 ## 10 SFS 与 VFS 是怎样衔接起来的?
 
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/VFS&#32;与&#32;SFS&#32;的衔接.png?raw=true)
+![](https://github.com/libinyl/ucore-study/blob/master/images/VFS%20%E4%B8%8E%20SFS%20%E7%9A%84%E8%A1%94%E6%8E%A5.png?raw=true)
 
 ## io_buffer 是什么?
 
@@ -244,7 +244,7 @@ fs_init(void) {
 https://github.com/chyyuu/ucore-x64-with-golang/blob/master/ucore/src/kern-ucore/fs/iobuf.h
 
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/iobuf&#32;与&#32;disk0_buffer.png?raw=true)
+![](https://github.com/libinyl/ucore-study/blob/master/images/iobuf%20%E4%B8%8E%20disk0_buffer.png?raw=true)
 
 
 
@@ -253,7 +253,7 @@ https://github.com/chyyuu/ucore-x64-with-golang/blob/master/ucore/src/kern-ucore
 
 一个理想的 IO 设备是什么样子的,向上层提供了什么接口?
 
-![](https://github.com/libinyl/ucore-study/blob/master/images/Canonical&#32;Device.png?raw=true)
+![](https://github.com/libinyl/ucore-study/blob/master/images/Canonical%20Device.png?raw=true)
 
 一个简化的设备接口提供 3 个寄存器:
 

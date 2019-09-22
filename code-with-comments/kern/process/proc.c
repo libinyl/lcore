@@ -16,6 +16,14 @@
 #include <vfs.h>
 #include <sysfile.h>
 
+/**
+ * ----------进程/线性机制的设计原理-----------
+ * 
+ * ucore 实现了简化版的 Linux 进程/线程机制.
+ * 
+ * 简介: 
+ */ 
+
 /* ------------- process/thread mechanism design&implementation -------------
 (an simplified Linux process/thread mechanism )
 introduction:
@@ -86,6 +94,10 @@ void forkrets(struct trapframe *tf);
 void switch_to(struct context *from, struct context *to);
 
 // alloc_proc - alloc a proc_struct and init all fields of proc_struct
+/**
+ * 初始化新的进程
+ * 
+ */ 
 static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
@@ -517,6 +529,13 @@ bad_fork_cleanup_proc:
 //   1. call exit_mmap & put_pgdir & mm_destroy to free the almost all memory space of process
 //   2. set process' state as PROC_ZOMBIE, then call wakeup_proc(parent) to ask parent reclaim itself.
 //   3. call scheduler to switch to other process
+/**
+ * 进程退出
+ * 
+ * 1. 释放进程的(几乎)所有资源
+ * 2. 设置状态为僵尸,然后唤醒父进程
+ * 3. 调用调度器来切换到其他进程
+ */ 
 int
 do_exit(int error_code) {
     if (current == idleproc) {

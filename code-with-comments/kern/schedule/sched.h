@@ -51,6 +51,9 @@ struct sched_class {
      */
 };
 
+/**
+ * 运行队列
+ */ 
 struct run_queue {
     list_entry_t run_list;
     unsigned int proc_num;
