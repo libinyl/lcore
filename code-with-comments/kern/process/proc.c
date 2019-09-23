@@ -21,7 +21,21 @@
  * 
  * ucore 实现了简化版的 Linux 进程/线程机制.
  * 
- * 简介: 
+ * 每个进程包含:
+ * - 独立的地址空间
+ * - 至少一个线程
+ * - 内核数据
+ * - 进程状态(用于上下文切换)
+ * - 文件
+ * 
+ * process state       :     meaning               -- reason
+ *  PROC_UNINIT     :   uninitialized           -- alloc_proc
+ *  PROC_SLEEPING   :   sleeping                -- try_free_pages, do_wait, do_sleep
+ *  PROC_RUNNABLE   :   runnable(maybe running) -- proc_init, wakeup_proc, 
+ *  PROC_ZOMBIE     :   almost dead             -- do_exit
+ * 
+ * 
+ * 
  */ 
 
 /* ------------- process/thread mechanism design&implementation -------------
@@ -41,13 +55,13 @@ process state       :     meaning               -- reason
 process state changing:
                                             
   alloc_proc                                 RUNNING
-      +                                   +--<----<--+
-      +                                   + proc_run +
+      |                                   +--<----<--+
+      |                                   | proc_run |
       V                                   +-->---->--+ 
 PROC_UNINIT -- proc_init/wakeup_proc --> PROC_RUNNABLE -- try_free_pages/do_wait/do_sleep --> PROC_SLEEPING --
-                                           A      +                                                           +
-                                           |      +--- do_exit --> PROC_ZOMBIE                                +
-                                           +                                                                  + 
+                                           A      |                                                           |
+                                           |      +--- do_exit --> PROC_ZOMBIE                                |
+                                           |                                                                  | 
                                            -----------------------wakeup_proc----------------------------------
 -----------------------------
 process relations

@@ -1,6 +1,7 @@
 #ifndef __USER_LIBS_SYSCALL_H__
 #define __USER_LIBS_SYSCALL_H__
 
+// 进程相关的系统调用
 int sys_exit(int error_code);
 int sys_fork(void);
 int sys_wait(int pid, int *store);
@@ -16,6 +17,7 @@ size_t sys_gettime(void);
 struct stat;
 struct dirent;
 
+// 文件相关的系统调用
 int sys_open(const char *path, uint32_t open_flags);
 int sys_close(int fd);
 int sys_read(int fd, void *base, size_t len);
