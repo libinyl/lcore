@@ -1,6 +1,8 @@
 #ifndef __USER_LIBS_SYSCALL_H__
 #define __USER_LIBS_SYSCALL_H__
 
+// 均对应内核函数 do_xxx
+
 // 进程相关的系统调用
 int sys_exit(int error_code);
 int sys_fork(void);

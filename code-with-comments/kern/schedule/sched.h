@@ -7,8 +7,11 @@
 
 struct proc_struct;
 
+/**
+ * 定时器--基于时间的调度机制
+ */ 
 typedef struct {
-    unsigned int expires;
+    unsigned int expires;       // 时钟节拍数,实际上是令此进程 sleep 时指定的时间(毫秒)
     struct proc_struct *proc;
     list_entry_t timer_link;
 } timer_t;
@@ -52,7 +55,7 @@ struct sched_class {
 };
 
 /**
- * 运行队列
+ * 就绪队列
  */ 
 struct run_queue {
     list_entry_t run_list;

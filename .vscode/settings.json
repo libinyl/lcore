@@ -7,6 +7,9 @@
         "defs.h": "c",
         "assert.h": "c",
         "dir.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "iterator": "c",
+        "random": "c",
+        "typeinfo": "c"
     }
 }

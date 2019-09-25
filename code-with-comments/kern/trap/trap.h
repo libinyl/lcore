@@ -28,6 +28,7 @@
 #define T_SIMDERR               19  // SIMD floating point error
 
 /* Hardware IRQ numbers. We receive these as (IRQ_OFFSET + IRQ_xx) */
+// IRQ = Interrupt Request
 #define IRQ_OFFSET              32  // IRQ 0 corresponds to int IRQ_OFFSET
 
 #define IRQ_TIMER               0

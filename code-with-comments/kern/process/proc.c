@@ -244,6 +244,13 @@ get_pid(void) {
 
 // proc_run - make process "proc" running on cpu
 // NOTE: before call switch_to, should load  base addr of "proc"'s new PDT
+/**
+ * 运行一个新的进程,即切换上下文
+ * 
+ * 1. 更新全局 current 变量
+ * 2. 配置新进程的栈指针,和cr3
+ * 2. 调用 switch_to 切换进程上下文
+ */ 
 void
 proc_run(struct proc_struct *proc) {
     if (proc != current) {
@@ -281,6 +288,7 @@ unhash_proc(struct proc_struct *proc) {
 }
 
 // find_proc - find proc frome proc hash_list according to pid
+// 根据 pid 找进程-哈希表
 struct proc_struct *
 find_proc(int pid) {
     if (0 < pid && pid < MAX_PID) {
@@ -322,6 +330,7 @@ setup_kstack(struct proc_struct *proc) {
 }
 
 // put_kstack - free the memory space of process kernel stack
+// 释放栈空间
 static void
 put_kstack(struct proc_struct *proc) {
     free_pages(kva2page((void *)(proc->kstack)), KSTACKPAGE);
@@ -396,6 +405,7 @@ bad_mm:
 
 // copy_thread - setup the trapframe on the  process's kernel stack top and
 //             - setup the kernel entry point and stack of process
+// 
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1;
@@ -499,21 +509,25 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     if ((proc = alloc_proc()) == NULL) {
         goto fork_out;
     }
-
+    // 设置父进程为当前进程
     proc->parent = current;
     assert(current->wait_state == 0);
-
+    // 设置栈空间
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
+    // 设置文件系统数据结构
     if (copy_fs(clone_flags, proc) != 0) { //for LAB8
         goto bad_fork_cleanup_kstack;
     }
+    //复制父进程的内存结构
     if (copy_mm(clone_flags, proc) != 0) {
         goto bad_fork_cleanup_fs;
     }
+    // 复制父进程的 trapframe 和 context
     copy_thread(proc, stack, tf);
 
+    // 添加到全局进程维护表中
     bool intr_flag;
     local_intr_save(intr_flag);
     {
@@ -524,6 +538,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     }
     local_intr_restore(intr_flag);
 
+    // 更新进程状态为 RUNNABLE 并添加到就绪队列
     wakeup_proc(proc);
 
     ret = proc->pid;
@@ -547,7 +562,7 @@ bad_fork_cleanup_proc:
  * 进程退出
  * 
  * 1. 释放进程的(几乎)所有资源
- * 2. 设置状态为僵尸,然后唤醒父进程
+ * 2. 设置状态为僵尸,然后唤醒父进程(由父进程来清理子进程的资源.子进程本身不可能在存活状态下清理自己的资源)
  * 3. 调用调度器来切换到其他进程
  */ 
 int
@@ -558,29 +573,31 @@ do_exit(int error_code) {
     if (current == initproc) {
         panic("initproc exit.\n");
     }
-    
+    // 回收用户进程内存资源
     struct mm_struct *mm = current->mm;
     if (mm != NULL) {
-        lcr3(boot_cr3);
-        if (mm_count_dec(mm) == 0) {
+        lcr3(boot_cr3);                 // 1 切换到内核页表
+        if (mm_count_dec(mm) == 0) {    // 2 mm_count-1=0 说明此 mm 没有被其他进程共享,可以被释放
             exit_mmap(mm);
             put_pgdir(mm);
             mm_destroy(mm);
         }
-        current->mm = NULL;
+        current->mm = NULL;             // 表示当前进程的内存已释放完毕
     }
     put_fs(current); //for LAB8
-    current->state = PROC_ZOMBIE;
+    current->state = PROC_ZOMBIE;       // 一旦进程设置为 PROC_ZOMBIE 就无力回天了,无法在此被调度,只能等死
     current->exit_code = error_code;
-    
+    // 
     bool intr_flag;
     struct proc_struct *proc;
     local_intr_save(intr_flag);
     {
+        // 唤醒父进程,来调用 wait,杀死自己
         proc = current->parent;
         if (proc->wait_state == WT_CHILD) {
             wakeup_proc(proc);
         }
+        // 调整父进程的子孙进程关系
         while (current->cptr != NULL) {
             proc = current->cptr;
             current->cptr = proc->optr;
@@ -908,6 +925,15 @@ do_yield(void) {
 // do_wait - wait one OR any children with PROC_ZOMBIE state, and free memory space of kernel stack
 //         - proc struct of this child.
 // NOTE: only after do_wait function, all resources of the child proces are free.
+
+// 等待一个或多个子进程.
+//  一旦子进程变为PROC_ZOMBIE状态,此函数则清理子进程的资源.
+// 若 pid 为 0,则用户调用的是 wait()函数
+// 若 pid 不为 0 则用户调用的是 waitpid()函数
+//
+// 考虑因素: 如果子进程还有子进程,则需要睡眠等待.重新调度进程队列.
+//
+// 清理资源: 1 从内核的进程维护表中移除  2 释放栈空间 释放进程控制块空间
 int
 do_wait(int pid, int *code_store) {
     struct mm_struct *mm = current->mm;
@@ -920,17 +946,17 @@ do_wait(int pid, int *code_store) {
     struct proc_struct *proc;
     bool intr_flag, haskid;
 repeat:
-    haskid = 0;
-    if (pid != 0) {
+    haskid = 0;     // 是否有子进程
+    if (pid != 0) { // 若调用的是 waitpid()
         proc = find_proc(pid);
-        if (proc != NULL && proc->parent == current) {
+        if (proc != NULL && proc->parent == current) {  // 若找到的进程是当前进程的子进程,
             haskid = 1;
-            if (proc->state == PROC_ZOMBIE) {
+            if (proc->state == PROC_ZOMBIE) {       // 必须是僵尸状态才可回收
                 goto found;
             }
         }
     }
-    else {
+    else {      // 调用的是 wait(),则找到任意一个处于退出状态的子进程
         proc = current->cptr;
         for (; proc != NULL; proc = proc->optr) {
             haskid = 1;

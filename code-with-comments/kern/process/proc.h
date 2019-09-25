@@ -47,7 +47,7 @@ struct proc_struct {
     int pid;                                    // Process ID
     int runs;                                   // the running times of Proces
     uintptr_t kstack;                           // Process kernel stack
-    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
+    volatile bool need_resched;                 // 是否期待cpu 重新调度(以暂时释放在本进程的计算资源) . bool value: need to be rescheduled to release CPU?
     struct proc_struct *parent;                 // the parent process
     struct mm_struct *mm;                       // Process's memory management field
     struct context context;                     // Switch here to run process
@@ -71,6 +71,7 @@ struct proc_struct {
 
 #define PF_EXITING                  0x00000001      // getting shutdown
 
+// 等待状态(等待原因))
 #define WT_INTERRUPTED               0x80000000                    // the wait state could be interrupted
 #define WT_CHILD                    (0x00000001 | WT_INTERRUPTED)  // wait child process
 #define WT_KSEM                      0x00000100                    // wait kernel semaphore

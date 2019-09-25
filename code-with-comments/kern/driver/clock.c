@@ -32,6 +32,7 @@ long SYSTEM_READ_TIMER( void ){
 /* *
  * clock_init - initialize 8253 clock to interrupt 100 times per second,
  * and then enable IRQ_TIMER.
+ * 设置时钟每秒中断 100 次,即两次中断间隔 0.01=10 毫秒  并使能时钟中断
  * */
 void
 clock_init(void) {

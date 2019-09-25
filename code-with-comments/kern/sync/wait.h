@@ -3,6 +3,7 @@
 
 #include <list.h>
 
+// 等待队列
 typedef struct {
     list_entry_t wait_head;
 } wait_queue_t;
@@ -10,9 +11,9 @@ typedef struct {
 struct proc_struct;
 
 typedef struct {
-    struct proc_struct *proc;
-    uint32_t wakeup_flags;
-    wait_queue_t *wait_queue;
+    struct proc_struct *proc;   // 等待进程
+    uint32_t wakeup_flags;      // 进程被放入等待队列的原因标记
+    wait_queue_t *wait_queue;   // 指向wait_t 结构所属于的 wait_queue
     list_entry_t wait_link;
 } wait_t;
 
