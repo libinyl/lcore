@@ -565,6 +565,24 @@ bad_fork_cleanup_proc:
  * 2. 设置状态为僵尸,然后唤醒父进程(由父进程来清理子进程的资源.子进程本身不可能在存活状态下清理自己的资源)
  * 3. 调用调度器来切换到其他进程
  */ 
+
+/* 
+ * 参考 <unix 网络编程 卷 1> 5.9 节:
+ * 
+ * 如果一个(父)进程终止，而该进程有子进程处于僵死状态，
+ * 那么这些子进程的父进程ID将被重置为1（init进程）。
+ * 的init进程将清理它们（也就是说init进程将wait它们，从而去除它们的僵死状态)
+ * 
+ * 如果过于依赖此机制, 相当于把清理僵尸进程的责任推给了内核.这占用了内核的资源
+ * 更好的做法是 fork 之后就 wait 或 waitpid,以清理子进程.
+ * 
+ * 网络编程时通常要异步处理,子进程exit 之后会向父进程发送信号,父进程捕获此信号并执行 wait,清理此进程.
+ * 为何要依赖信号异步处理?因为父进程正阻塞在 accept 函数,而不是阻塞在 wait.
+ * 
+ * 然而 ucore 没有信号机制.
+ * 如果父进程实现了 wait,那么内核会把清理工作分配给父进程实现.
+ * 如果没有,则调整子进程的父进程为 init,再有 init 清理子进程.   
+ */
 int
 do_exit(int error_code) {
     if (current == idleproc) {
@@ -597,7 +615,8 @@ do_exit(int error_code) {
         if (proc->wait_state == WT_CHILD) {
             wakeup_proc(proc);
         }
-        // 调整父进程的子孙进程关系
+        // 
+
         while (current->cptr != NULL) {
             proc = current->cptr;
             current->cptr = proc->optr;
@@ -926,7 +945,7 @@ do_yield(void) {
 //         - proc struct of this child.
 // NOTE: only after do_wait function, all resources of the child proces are free.
 
-// 等待一个或多个子进程.
+// 等待一个或多个子进程僵死并清理.
 //  一旦子进程变为PROC_ZOMBIE状态,此函数则清理子进程的资源.
 // 若 pid 为 0,则用户调用的是 wait()函数
 // 若 pid 不为 0 则用户调用的是 waitpid()函数
