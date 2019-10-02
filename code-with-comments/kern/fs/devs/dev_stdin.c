@@ -49,6 +49,7 @@ dev_stdin_read(char *buf, size_t len) {
             }
             else {
                 wait_t __wait, *wait = &__wait;
+                // 切换至睡眠状态,进入等待队列
                 wait_current_set(wait_queue, wait, WT_KBD);
                 local_intr_restore(intr_flag);
 

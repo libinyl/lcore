@@ -53,7 +53,7 @@ struct proc_struct {
     enum proc_state state;                      // 进程状态
     int pid;                                    // 进程 ID
     int runs;                                   // the running times of Process
-    uintptr_t kstack;                           // 每个进程都有内核栈,位于内核地址空间内.不共享. cpu的 tr 寄存器维护tss结构的地址ts 此结构保存当前内核栈指针.每个进程在其内核栈以 trapframe 的形式保存当前的状态.
+    uintptr_t kstack;                           // 每个进程都有独立的内核栈,位于内核地址空间内.不共享. cpu的 tr 寄存器维护tss结构的地址ts 此结构保存当前内核栈指针.每个进程在其内核栈以 trapframe 的形式保存当前的状态.
     volatile bool need_resched;                 // 是否期待cpu 重新调度(以暂时释放在本进程的计算资源) . bool value: need to be rescheduled to release CPU?
     struct proc_struct *parent;                 // 父进程
     struct mm_struct *mm;                       // 进程的内存描述符

@@ -116,6 +116,13 @@ lgdt(struct pseudodesc *pd) {
  * load_esp0 - change the ESP0 in default task state segment,
  * so that we can use different kernel stack when we trap frame
  * user to kernel.
+ * 
+ * 更新默认 TSS 的 ESP0.
+ * 
+ * 用于当用户进程trap 到 kernel 时指定内核栈顶
+ * 
+ * 1) 当特权态3 发生中断/异常/系统调用,则 cpu从特权态 3->0,则从当前进程栈顶压栈保存现场,更新 trapframe
+ * 2) 当特权态0 发生,则 cpu 特权不变,则直接从 esp0 处压栈保存现场
  * */
 void
 load_esp0(uintptr_t esp0) {

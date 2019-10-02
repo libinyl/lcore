@@ -226,14 +226,15 @@ get_pid(void) {
     return last_pid;
 }
 
-// proc_run - make process "proc" running on cpu
-// NOTE: before call switch_to, should load  base addr of "proc"'s new PDT
 /**
- * 运行一个新的进程,即切换上下文
+ * 运行指定的进程 proc
+ * 
+ * 方式: 切换上下文
  * 
  * 1. 更新全局 current 变量
- * 2. 配置新进程的栈指针,和cr3
- * 2. 调用 switch_to 切换进程上下文
+ * 2. 设置内核栈(tss)
+ * 3. 配置新进程的栈指针,和cr3
+ * 4. 调用 switch_to 切换进程上下文
  */ 
 void
 proc_run(struct proc_struct *proc) {
@@ -242,10 +243,11 @@ proc_run(struct proc_struct *proc) {
         struct proc_struct *prev = current, *next = proc;
         local_intr_save(intr_flag);
         {
-            current = proc;
-            load_esp0(next->kstack + KSTACKSIZE);   // 设置当前进程的内核栈(实际是加载内核栈地址到 ts变量中)
-            lcr3(next->cr3);
-            switch_to(&(prev->context), &(next->context));
+            current = proc;     //1 更新 current
+            load_esp0(next->kstack + KSTACKSIZE);           // 2 当前进程的内核栈顶
+            lcr3(next->cr3);    //3 用于用户进程页表切换
+            // 把当前环境保存在 from,把 to 的状态加载到环境上
+            switch_to(&(prev->context), &(next->context));  //4 执行完之后,当前进程已经是下一个进程了
         }
         local_intr_restore(intr_flag);
     }
@@ -397,6 +399,12 @@ bad_mm:
 
 // 1. 在进程内核栈顶构建 trapframe
 // 2. 设置内核 entry point 和进程栈
+/**
+ * 本来 trapframe 和 context 都是作为"执行现场"在中断/进程切换时保存到内核栈的结构,待轮转回来之后再用于恢复状态,
+ * 
+ * 但对于新进程而言,直接利用了"恢复"这一步骤,相当于进行了初始化.
+ * 
+ */ 
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1; // 先转化类型,再-1,正好空出一个 trapframe 的空间
@@ -405,6 +413,7 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf->tf_esp = esp;         
     proc->tf->tf_eflags |= FL_IF;   // 使能中断.意思是此内核进程在执行时可以相应中断
 
+    //context 的其他字段都是 0
     proc->context.eip = (uintptr_t)forkret;     // eip ->forkret->用 tf 恢复的现场
     proc->context.esp = (uintptr_t)(proc->tf);  // 紧邻 tf 之下.内核栈的基址就是 kstack,而不是 bp.process 的context初始化时每个值都是 0.
 }

@@ -27,6 +27,9 @@ sched_class_dequeue(struct proc_struct *proc) {
     sched_class->dequeue(rq, proc);
 }
 
+/**
+ * 从就绪队列挑选下一个可运行的进程.一旦被选中,意味着会被溢出运行队列,并执行.
+ */ 
 static inline struct proc_struct *
 sched_class_pick_next(void) {
     return sched_class->pick_next(rq);

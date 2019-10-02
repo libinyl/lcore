@@ -12,21 +12,16 @@
 #     uint32_t ebp;
 # };
 
-#                   <- bp
-# ...
-# 
-# &(next->context)  //to
-# &(prev->context)  //from
-# ret addr          <- sp
-# 
-# 
+
+# 注意 context 在 PCB 中以结构体而非指针类型保存.
+
 
 switch_to:                      # switch_to(from, to)
 
-    # 在栈上保存 from 的一堆寄存器
-    movl 4(%esp), %eax          # eax points to from
-    popl 0(%eax)                # save eip !popl
-    movl %esp, 4(%eax)
+    # 在栈上保存 from 的执行现场
+    movl 4(%esp), %eax          # eax 指向 from,其实也指向了 frome 的 eip
+    popl 0(%eax)                # pop 前,esp 指向调用者的 eip,即返回地址,pop 后直接把 eip 赋给了 from 的 eip 变量. 然后 esp 指向了 from.
+    movl %esp, 4(%eax)          # 把当前各种寄存器的值保存在 from context 的内存中.
     movl %ebx, 8(%eax)
     movl %ecx, 12(%eax)
     movl %edx, 16(%eax)
@@ -34,10 +29,10 @@ switch_to:                      # switch_to(from, to)
     movl %edi, 24(%eax)
     movl %ebp, 28(%eax)
 
-    # 把参数中的 to 赋给寄存器
-    movl 4(%esp), %eax          # not 8(%esp): popped return address already
-                                # eax now points to to
-    movl 28(%eax), %ebp
+    # 把 to 中的值赋给寄存器
+    movl 4(%esp), %eax          # not 8(%esp): popped return address already. to context 的地址赋给 eax.
+                                # eax 指向了 to
+    movl 28(%eax), %ebp         # 
     movl 24(%eax), %edi
     movl 20(%eax), %esi
     movl 16(%eax), %edx
@@ -45,7 +40,7 @@ switch_to:                      # switch_to(from, to)
     movl 8(%eax), %ebx
     movl 4(%eax), %esp
 
-    pushl 0(%eax)               # push eip
+    pushl 0(%eax)               # push eip  当前 eax指向to 的eip.这里把它入栈,这样执行 ret 就会执行到to 的控制流.
 
     ret
 

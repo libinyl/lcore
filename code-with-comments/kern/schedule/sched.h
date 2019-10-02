@@ -55,7 +55,7 @@ struct sched_class {
 };
 
 /**
- * 就绪队列
+ * 就绪队列,每个在用户看来都是正在运行,不断地切换上下文
  */ 
 struct run_queue {
     list_entry_t run_list;
