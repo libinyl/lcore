@@ -60,7 +60,7 @@ __alltraps:
     # 清理调用 trap 前压栈的 esp
     popl %esp
 
-    # 通过__trapret从中断返回.
+# 通过__trapret从中断返回.
 .globl __trapret
 __trapret:
     # 1. 恢复各种寄存器值
@@ -82,6 +82,9 @@ __trapret:
     #   3. 恢复 ESP,SS.(权限发生变化)
     iret
 
+# forkrets(current->tf);
+# 参数是当前进程的 tf
+# 此处直接利用参数中的 tf,设置新的进程的各种状态
 .globl forkrets
 forkrets:
     # set stack to this new process's trapframe

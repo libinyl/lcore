@@ -47,6 +47,7 @@
 #define T_SWITCH_TOK                121    // user/kernel switch
 
 /* 执行pushal 指令时,这些寄存器值入栈 */
+/* 参考 syscall,这些都是系统调用时传入的参数和返回值参数;eax 接收返回值 */
 struct pushregs {
     uint32_t reg_edi;
     uint32_t reg_esi;

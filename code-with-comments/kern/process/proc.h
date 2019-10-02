@@ -24,13 +24,15 @@ enum proc_state {
 // (Not saving %eax just simplifies the switching code.)
 // The layout of context must match code in switch.S.
 /**
- * 进程上下文信息,用于进程切换时保存当前状态.
+ * 进程上下文信息(执行现场),用于进程切换时保存当前状态.
  * 
  * 此结构的布局与 switch.S 中严格一致.
+ * 
+ * 一旦调度器选择某个进程执行,就会用此结构中的信息.
  */ 
 struct context {
-    uint32_t eip;
-    uint32_t esp;
+    uint32_t eip;   // 上次停止执行时下一条指令的地址,即返回地址
+    uint32_t esp;   // 上次停止执行的 esp
     uint32_t ebx;
     uint32_t ecx;
     uint32_t edx;
@@ -51,12 +53,12 @@ struct proc_struct {
     enum proc_state state;                      // 进程状态
     int pid;                                    // 进程 ID
     int runs;                                   // the running times of Process
-    uintptr_t kstack;                           // 进程内核栈 cpu->tss 寄存器tr->ts 结构保存当前内核栈
+    uintptr_t kstack;                           // 每个进程都有内核栈,位于内核地址空间内.不共享. cpu的 tr 寄存器维护tss结构的地址ts 此结构保存当前内核栈指针.每个进程在其内核栈以 trapframe 的形式保存当前的状态.
     volatile bool need_resched;                 // 是否期待cpu 重新调度(以暂时释放在本进程的计算资源) . bool value: need to be rescheduled to release CPU?
     struct proc_struct *parent;                 // 父进程
     struct mm_struct *mm;                       // 进程的内存描述符
-    struct context context;                     // Switch here to run process
-    struct trapframe *tf;                       // 当前中断的中断帧
+    struct context context;                     // Switch here to run process,用于进程间切换
+    struct trapframe *tf;                       // 当前中断的中断帧,总是指向内核栈的某个位置.每个进程在内核栈以 trapframe 的形式保存当前的状态.
     uintptr_t cr3;                              // 当前进程的PDT 基址
     uint32_t flags;                             // Process flag
     char name[PROC_NAME_LEN + 1];               // 进程名称

@@ -1,4 +1,8 @@
-# ucore Lab4~Lab5 实验笔记 进程实现与管理
+# ucore Lab4~Lab5 进程实现与管理
+
+这是个大坑.我感觉整个操作系统的实现都是围绕着进程的,从进程大量的字段就可见一斑.
+
+这里把 Lab4 和 Lab5 综合一下,作为对实验指导书的补充和思考.
 
 ## 1 什么是进程?进程的数据结构是怎样的?内核怎样管理进程?
 
@@ -56,7 +60,7 @@ struct proc_struct {
 
 **中断帧**
 
-即`trapframe`, 用于中断时保存用户进程状态.
+即`trapframe`, 用于中断时保存用户进程状态;
 
 
 
@@ -74,7 +78,7 @@ struct proc_struct {
 
 ## 3 进程
 
-## 如何创建一个新的(内核)进程?
+## 创建一个新的(内核)进程要考虑什么?
 
 内核进程也是进程,创建内核进程调用`kernel_thread`函数,实际是对`do_fork`的封装.那么如何创建一个普通进程?
 
@@ -102,6 +106,30 @@ struct proc_struct {
 对于文件描述符的克隆结果如图所示:
 
 ![](/images/fork-文件描述块.png)
+
+## 那么具体如何创建新的内核进程?
+
+考察函数`kernel_thread`:
+
+```C
+// 创建内核线程,以函数 fn 为控制流.
+//      构造新的内核态的 trapframe,用于 do_fork 中复制.
+int
+kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
+    struct trapframe;
+    memset(&tf, 0, sizeof(struct trapframe));
+    tf.tf_cs = KERNEL_CS;
+    tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
+    tf.tf_regs.reg_ebx = (uint32_t)fn;
+    tf.tf_regs.reg_edx = (uint32_t)arg;
+    tf.tf_eip = (uint32_t)kernel_thread_entry;
+    return do_fork(clone_flags | CLONE_VM, 0, &tf);
+}
+```
+
+
+
+
 
 ## 怎样区分内核进程和用户进程?
 

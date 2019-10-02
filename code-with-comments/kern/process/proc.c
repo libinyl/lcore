@@ -116,22 +116,6 @@ static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
     if (proc != NULL) {
-    //LAB4:EXERCISE1 YOUR CODE
-    /*
-     * below fields in proc_struct need to be initialized
-     *       enum proc_state state;                      // Process state
-     *       int pid;                                    // Process ID
-     *       int runs;                                   // the running times of Proces
-     *       uintptr_t kstack;                           // Process kernel stack
-     *       volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
-     *       struct proc_struct *parent;                 // the parent process
-     *       struct mm_struct *mm;                       // Process's memory management field
-     *       struct context context;                     // Switch here to run process
-     *       struct trapframe *tf;                       // Trap frame for current interrupt
-     *       uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
-     *       uint32_t flags;                             // Process flag
-     *       char name[PROC_NAME_LEN + 1];               // Process name
-     */
      //LAB5 YOUR CODE : (update LAB4 steps)
     /*
      * below fields(add in LAB5) in proc_struct need to be initialized	
@@ -148,7 +132,7 @@ alloc_proc(void) {
         proc->mm = NULL;
         memset(&(proc->context), 0, sizeof(struct context));
         proc->tf = NULL;
-        proc->cr3 = boot_cr3;
+        proc->cr3 = boot_cr3;   // 内核空间对多有内核线程可见
         proc->flags = 0;
         memset(proc->name, 0, PROC_NAME_LEN);
         proc->wait_state = 0;
@@ -270,6 +254,11 @@ proc_run(struct proc_struct *proc) {
 // forkret -- the first kernel entry point of a new thread/process
 // NOTE: the addr of forkret is setted in copy_thread function
 //       after switch_to, the current proc will execute here.
+/**
+ * 
+ * 此函数作为新进程的内核入口,在copy_thread函数中被赋给新进程的 context.
+ * 当调用switch_to后,将会在此执行.
+ */ 
 static void
 forkret(void) {
     forkrets(current->tf);
@@ -303,26 +292,24 @@ find_proc(int pid) {
     return NULL;
 }
 
-// kernel_thread - create a kernel thread using "fn" function
-// NOTE: the contents of temp trapframe tf will be copied to 
-//       proc->tf in do_fork-->copy_thread function
 // 创建内核线程,以函数 fn 为控制流.
-//      构造新的内核态的 trapframe 传入内核线程.
+//      构造新的内核态的 trapframe,用于 do_fork 中复制.
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     struct trapframe;
     memset(&tf, 0, sizeof(struct trapframe));
-    tf.tf_cs = KERNEL_CS;
-    tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
+    // 初始化内核中断帧
+    tf.tf_cs = KERNEL_CS;                           // 内核代码段
+    tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;     // 内核数据段
     tf.tf_regs.reg_ebx = (uint32_t)fn;
     tf.tf_regs.reg_edx = (uint32_t)arg;
-    tf.tf_eip = (uint32_t)kernel_thread_entry;
+    tf.tf_eip = (uint32_t)kernel_thread_entry;      // 内核线程入口点
     return do_fork(clone_flags | CLONE_VM, 0, &tf);
 }
 
-// setup_kstack - alloc pages with size KSTACKPAGE as process kernel stack
 /**
- * 申请内核栈(供 TSS 段使用)
+ * 申请内核栈 = KSTACKPAGE 2 page
+ * (供 TSS 段使用)
  */ 
 static int
 setup_kstack(struct proc_struct *proc) {
@@ -408,20 +395,18 @@ bad_mm:
     return ret;
 }
 
-// copy_thread - setup the trapframe on the  process's kernel stack top and
-//             - setup the kernel entry point and stack of process
 // 1. 在进程内核栈顶构建 trapframe
 // 2. 设置内核 entry point 和进程栈
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
-    proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1; //todo trapframe 与内核栈的位置?
+    proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1; // 先转化类型,再-1,正好空出一个 trapframe 的空间
     *(proc->tf) = *tf;
-    proc->tf->tf_regs.reg_eax = 0;
-    proc->tf->tf_esp = esp;
-    proc->tf->tf_eflags |= FL_IF;
+    proc->tf->tf_regs.reg_eax = 0;  // 子进程的返回值
+    proc->tf->tf_esp = esp;         
+    proc->tf->tf_eflags |= FL_IF;   // 使能中断.意思是此内核进程在执行时可以相应中断
 
-    proc->context.eip = (uintptr_t)forkret;
-    proc->context.esp = (uintptr_t)(proc->tf);
+    proc->context.eip = (uintptr_t)forkret;     // eip ->forkret->用 tf 恢复的现场
+    proc->context.esp = (uintptr_t)(proc->tf);  // 紧邻 tf 之下.内核栈的基址就是 kstack,而不是 bp.process 的context初始化时每个值都是 0.
 }
 
 //copy_fs&put_fs function used by do_fork in LAB8
@@ -470,6 +455,20 @@ put_fs(struct proc_struct *proc) {
  * @stack:       the parent's user stack pointer. if stack==0, It means to fork a kernel thread.
  * @tf:          the trapframe info, which will be copied to child process's proc->tf
  */
+/**
+ * 
+ * fork 的结果,从父进程的视角看,是初始化新的进程结构并*加入到运行队列*里.(wakeup_proc)
+ * 
+ * stack: 父进程的stack pointer.如果值为 0,意味着这是在 fork 一个内核进程.
+ * 
+ * 步骤:
+ *      - 构造新的 PCB
+ *      - 分配并设置内核栈(tss)
+ *      - 复制内存描述符(mm)
+ *      - 设置上下文,用户栈地址,进程入口(即cotext的 ip 和 sp,待调度时切换过去)
+ *      - 中断帧(复制来自 kernel_thread 的初始值并调整)
+ *      - 
+ */ 
 int
 do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     int ret = -E_NO_FREE_PROC;
@@ -478,11 +477,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
         goto fork_out;
     }
     ret = -E_NO_MEM;
-    //LAB4:EXERCISE2 YOUR CODE
-    //LAB8:EXERCISE2 YOUR CODE  HINT:how to copy the fs in parent's proc_struct?
     /*
-     * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
-     * MACROs or Functions:
      *   alloc_proc:   create a proc struct and init fields (lab4:exercise1)
      *   setup_kstack: alloc pages with size KSTACKPAGE as process kernel stack
      *   copy_mm:      process "proc" duplicate OR share process "current"'s mm according clone_flags
@@ -518,7 +513,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     // 设置父进程为当前进程
     proc->parent = current;
     assert(current->wait_state == 0);
-    // 建立内核栈
+    // 建立内核栈空间,并用proc->kstack维护,(指向栈底,低地址)
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
@@ -544,10 +539,11 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     }
     local_intr_restore(intr_flag);
 
-    // 更新进程状态为 RUNNABLE 并添加到就绪队列
+    // 把子进程更新进程状态为 RUNNABLE 并添加到就绪队列
     wakeup_proc(proc);
 
-    ret = proc->pid;
+    // 子进程不会执行至此
+    ret = proc->pid;    // 对父进程返回子进程的 pid
 fork_out:
     return ret;
 
@@ -906,9 +902,7 @@ failed_cleanup:
  * 对于执行的系统调用(exec),内核的作用是准备用户环境.这与其他的系统调用思维方式可能有所区别.
  * 通常系统调用是一种"服务",不改变用户进程本身.
  * 但是 exec 系统调用的目的就是将可执行文件实例化为一个程序,包括设置它的内存资源,设置进程的各种属性.
- * 一个进程发起了 exec 系统调用,意味着它本身将被摧毁;
- * 从 exec 返回时,将诞生一个新的进程.很是壮烈.
- * 
+ * 一个进程在 fork 之后,发起了 exec 系统调用,意味着它本身的属性会被重新设置.
  * 
  * name: 程序名称
  * argc: 参数数量
@@ -1164,9 +1158,6 @@ init_main(void *arg) {
     return 0;
 }
 
-// proc_init - set up the first kernel thread idleproc "idle" by itself and 
-//           - create the second kernel thread init_main
-
 /*
  * 初始化进程环境
  *  1. 创建 1st 内核进程 idleproc
@@ -1175,19 +1166,19 @@ init_main(void *arg) {
 void
 proc_init(void) {
     int i;
-
+    // 初始化进程表
     list_init(&proc_list);
     for (i = 0; i < HASH_LIST_SIZE; i ++) {
         list_init(hash_list + i);
     }
-
+    // 初始化idle PCB
     if ((idleproc = alloc_proc()) == NULL) {
         panic("cannot alloc idleproc.\n");
     }
 
-    idleproc->pid = 0;
+    idleproc->pid = 0;                              // 0 号线程
     idleproc->state = PROC_RUNNABLE;
-    idleproc->kstack = (uintptr_t)bootstack;        // idle 的内核栈
+    idleproc->kstack = (uintptr_t)bootstack;        // idle 的内核栈自一开始就有,以后其他所有process的内核栈都需重新分配
     idleproc->need_resched = 1;
     
     if ((idleproc->filesp = files_create()) == NULL) {

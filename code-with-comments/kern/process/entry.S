@@ -1,3 +1,5 @@
+# 内核线程入口点,就是内核线程函数fn的驱动
+
 .text
 .globl kernel_thread_entry
 kernel_thread_entry:        # void kernel_thread(void)
