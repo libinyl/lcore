@@ -76,6 +76,8 @@ pde_t * const vpd = (pde_t *)PGADDR(PDX(VPT), PDX(VPT), 0);
  *   - 0x18:  user code segment
  *   - 0x20:  user data segment
  *   - 0x28:  defined for tss, initialized in gdt_init
+ * 
+ * 全局段描述符表
  * */
 static struct segdesc gdt[] = {
     SEG_NULL,
@@ -591,6 +593,12 @@ tlb_invalidate(pde_t *pgdir, uintptr_t la) {
 // pgdir_alloc_page - call alloc_page & page_insert functions to 
 //                  - allocate a page size memory & setup an addr map
 //                  - pa<->la with linear address la and the PDT pgdir
+/**
+ * 
+ * 
+ * 建立 
+ * la: liner address,线性地址
+ */ 
 struct Page *
 pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {
     struct Page *page = alloc_page();

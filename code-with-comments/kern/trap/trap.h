@@ -5,7 +5,7 @@
 
 /* Trap Numbers */
 
-/* Processor-defined: */
+/** 处理器定义的中断号 **/
 #define T_DIVIDE                0   // divide error
 #define T_DEBUG                 1   // debug exception
 #define T_NMI                   2   // non-maskable interrupt
@@ -46,7 +46,7 @@
 #define T_SWITCH_TOU                120    // user/kernel switch
 #define T_SWITCH_TOK                121    // user/kernel switch
 
-/* registers as pushed by pushal */
+/* 执行pushal 指令时,这些寄存器值入栈 */
 struct pushregs {
     uint32_t reg_edi;
     uint32_t reg_esi;
@@ -59,7 +59,7 @@ struct pushregs {
 };
 
 struct trapframe {
-    struct pushregs tf_regs;
+    struct pushregs tf_regs;    // pushal
     uint16_t tf_gs;
     uint16_t tf_padding0;
     uint16_t tf_fs;

@@ -117,6 +117,9 @@ sfs_rbuf(struct sfs_fs *sfs, void *buf, size_t len, uint32_t blkno, off_t offset
  * @len:    the length need to Wr
  * @blkno:  the NO. of disk block
  * @offset: the offset in the content of disk block
+ * 
+ * 
+ * 最基础的以块为单位的写入操作
  */
 int
 sfs_wbuf(struct sfs_fs *sfs, void *buf, size_t len, uint32_t blkno, off_t offset) {

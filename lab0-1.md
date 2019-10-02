@@ -279,6 +279,8 @@ STEP 2的要求是在idt_init函数中依次对所有中断入口进行初始化
      lidt(&idt_pd);// 加载维护 idt 位置的结构到 idtr.
 ```
 
+![](/images/中断结构.png)
+
 ## 其他
 
 调试时遇到一个非常有意思的坑.填充`print_stackframe`函数时,这样写是错误的,会触发`Triple fault`:

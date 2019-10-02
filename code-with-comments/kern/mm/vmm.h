@@ -60,7 +60,7 @@ struct vma_struct {
 // memory 描述符,描述整个进程空间的内存结构
 struct mm_struct {
     list_entry_t mmap_list;        // vma 链表,按基址排序                       | linear list link which sorted by start addr of vma 
-    struct vma_struct *mmap_cache; // 当前正在使用的 vma    | current accessed vma, used for speed purpose
+    struct vma_struct *mmap_cache; // 当前正在使用的 vma                        | current accessed vma, used for speed purpose
     pde_t *pgdir;                  // the PDT of these vma
     int map_count;                 // vma 个数                                 | the count of these vma
     void *sm_priv;                 // 当前进程的置换链表头                        | the private data for swap manager 

@@ -208,7 +208,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     }
 
     /* load and check superblock */
-    /* 加载&校验超级块 */
+    /* 加载&校验超级块(占 1 块) */
     if ((ret = sfs_init_read(dev, SFS_BLKN_SUPER, sfs_buffer)) != 0) {
         goto failed_cleanup_sfs_buffer;
     }

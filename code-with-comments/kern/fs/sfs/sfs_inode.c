@@ -357,7 +357,7 @@ sfs_bmap_free_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index) 
  * @index:    the logical index of disk block in inode
  * @ino_store:the NO. of disk block
  * 
- * 在 SFS 文件系统上找到内存 sfs_inode 对应的索引值
+ * 通过 bitmap, 在 SFS 文件系统上找到内存 sfs_inode 对应的索引值
  * 
  */
 static int
@@ -643,6 +643,7 @@ sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset
     }
 
     if ((size = endpos % SFS_BLKSIZE) != 0) {
+        // 1. 在
         if ((ret = sfs_bmap_load_nolock(sfs, sin, blkno, &ino)) != 0) {
             goto out;
         }
@@ -932,6 +933,8 @@ sfs_gettype(struct inode *node, uint32_t *type_store) {
 
 /* 
  * sfs_tryseek - Check if seeking to the specified position within the file is legal.
+ * 检查文件位置指示符是否超过限制.如果超过限制返回错误,如果大于当前文件大小则扩展文件.
+ * 
  */
 static int
 sfs_tryseek(struct inode *node, off_t pos) {
@@ -947,6 +950,7 @@ sfs_tryseek(struct inode *node, off_t pos) {
 
 /*
  * sfs_truncfile : reszie the file with new length
+ * 文件(向上)取整
  */
 static int
 sfs_truncfile(struct inode *node, off_t len) {

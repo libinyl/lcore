@@ -276,11 +276,10 @@ trap_dispatch(struct trapframe *tf) {
     }
 }
 
-/* *
- * trap - handles or dispatches an exception/interrupt. if and when trap() returns,
- * the code in kern/trap/trapentry.S restores the old CPU state saved in the
- * trapframe and then uses the iret instruction to return from the exception.
- * */
+/**
+ * 处理并分发一个中断或异常.
+ * 如果返回,则trapentry.S 恢复 cpu 之前的状态(栈上保存,以 trapframe 的结构),然后执行 iret返回.
+ */ 
 void
 trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
@@ -290,15 +289,20 @@ trap(struct trapframe *tf) {
     }
     else {
         // keep a trapframe chain in stack
+        // 中断嵌套
+        //1 暂存当前进程的上一个 tf
         struct trapframe *otf = current->tf;
+        //2 更新当前进程的 tf
         current->tf = tf;
     
         bool in_kernel = trap_in_kernel(tf);
-    
+
+        // 处理当前tf
         trap_dispatch(tf);
-    
+        // 恢复上一个 tf
         current->tf = otf;
         if (!in_kernel) {
+            // 检查进程标志,是否被标记为自然退出
             if (current->flags & PF_EXITING) {
                 do_exit(-E_KILLED);
             }

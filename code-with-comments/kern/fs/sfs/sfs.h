@@ -112,6 +112,7 @@ struct sfs_fs {
 #define sin_hashfn(x)                               (hash32(x, SFS_HLIST_SHIFT))
 
 /* size of freemap (in bits) */
+// 根据 super 结构获取 freemap 的 bit 数 = 向上取整(块数 * 每块位数)
 #define sfs_freemap_bits(super)                     ROUNDUP((super)->blocks, SFS_BLKBITS)
 
 /* size of freemap (in blocks) */

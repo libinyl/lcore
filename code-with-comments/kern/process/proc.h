@@ -23,6 +23,11 @@ enum proc_state {
 // which are caller save, but not the return register %eax.
 // (Not saving %eax just simplifies the switching code.)
 // The layout of context must match code in switch.S.
+/**
+ * 进程上下文信息,用于进程切换时保存当前状态.
+ * 
+ * 此结构的布局与 switch.S 中严格一致.
+ */ 
 struct context {
     uint32_t eip;
     uint32_t esp;
@@ -43,30 +48,30 @@ extern list_entry_t proc_list;
 struct inode;
 
 struct proc_struct {
-    enum proc_state state;                      // Process state
-    int pid;                                    // Process ID
-    int runs;                                   // the running times of Proces
-    uintptr_t kstack;                           // Process kernel stack
+    enum proc_state state;                      // 进程状态
+    int pid;                                    // 进程 ID
+    int runs;                                   // the running times of Process
+    uintptr_t kstack;                           // 进程内核栈 cpu->tss 寄存器tr->ts 结构保存当前内核栈
     volatile bool need_resched;                 // 是否期待cpu 重新调度(以暂时释放在本进程的计算资源) . bool value: need to be rescheduled to release CPU?
-    struct proc_struct *parent;                 // the parent process
-    struct mm_struct *mm;                       // Process's memory management field
+    struct proc_struct *parent;                 // 父进程
+    struct mm_struct *mm;                       // 进程的内存描述符
     struct context context;                     // Switch here to run process
-    struct trapframe *tf;                       // Trap frame for current interrupt
-    uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
+    struct trapframe *tf;                       // 当前中断的中断帧
+    uintptr_t cr3;                              // 当前进程的PDT 基址
     uint32_t flags;                             // Process flag
-    char name[PROC_NAME_LEN + 1];               // Process name
+    char name[PROC_NAME_LEN + 1];               // 进程名称
     list_entry_t list_link;                     // Process link list
     list_entry_t hash_link;                     // Process hash list
     int exit_code;                              // exit code (be sent to parent proc)
-    uint32_t wait_state;                        // waiting state
-    struct proc_struct *cptr, *yptr, *optr;     // children, younger,older relations between processes
-    struct run_queue *rq;                       // running queue contains Process
-    list_entry_t run_link;                      // the entry linked in run queue
+    uint32_t wait_state;                        // 等待状态
+    struct proc_struct *cptr, *yptr, *optr;     // children, younger,older 进程
+    struct run_queue *rq;                       // 包含当前进程的运行队列
+    list_entry_t run_link;                      // run queue 运行队列链接
     int time_slice;                             // time slice for occupying the CPU
     skew_heap_entry_t lab6_run_pool;            // FOR LAB6 ONLY: the entry in the run pool
     uint32_t lab6_stride;                       // FOR LAB6 ONLY: the current stride of the process
     uint32_t lab6_priority;                     // FOR LAB6 ONLY: the priority of process, set by lab6_set_priority(uint32_t)
-    struct files_struct *filesp;                // the file related info(pwd, files_count, files_array, fs_semaphore) of process
+    struct files_struct *filesp;                // 文件结构
 };
 
 #define PF_EXITING                  0x00000001      // getting shutdown

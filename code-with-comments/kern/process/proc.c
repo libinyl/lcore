@@ -259,7 +259,7 @@ proc_run(struct proc_struct *proc) {
         local_intr_save(intr_flag);
         {
             current = proc;
-            load_esp0(next->kstack + KSTACKSIZE);
+            load_esp0(next->kstack + KSTACKSIZE);   // 设置当前进程的内核栈(实际是加载内核栈地址到 ts变量中)
             lcr3(next->cr3);
             switch_to(&(prev->context), &(next->context));
         }
@@ -306,9 +306,11 @@ find_proc(int pid) {
 // kernel_thread - create a kernel thread using "fn" function
 // NOTE: the contents of temp trapframe tf will be copied to 
 //       proc->tf in do_fork-->copy_thread function
+// 创建内核线程,以函数 fn 为控制流.
+//      构造新的内核态的 trapframe 传入内核线程.
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
-    struct trapframe tf;
+    struct trapframe;
     memset(&tf, 0, sizeof(struct trapframe));
     tf.tf_cs = KERNEL_CS;
     tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
@@ -319,6 +321,9 @@ kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
 }
 
 // setup_kstack - alloc pages with size KSTACKPAGE as process kernel stack
+/**
+ * 申请内核栈(供 TSS 段使用)
+ */ 
 static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
@@ -330,7 +335,7 @@ setup_kstack(struct proc_struct *proc) {
 }
 
 // put_kstack - free the memory space of process kernel stack
-// 释放栈空间
+// 释放内核栈
 static void
 put_kstack(struct proc_struct *proc) {
     free_pages(kva2page((void *)(proc->kstack)), KSTACKPAGE);
@@ -405,10 +410,11 @@ bad_mm:
 
 // copy_thread - setup the trapframe on the  process's kernel stack top and
 //             - setup the kernel entry point and stack of process
-// 
+// 1. 在进程内核栈顶构建 trapframe
+// 2. 设置内核 entry point 和进程栈
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
-    proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1;
+    proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1; //todo trapframe 与内核栈的位置?
     *(proc->tf) = *tf;
     proc->tf->tf_regs.reg_eax = 0;
     proc->tf->tf_esp = esp;
@@ -512,7 +518,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     // 设置父进程为当前进程
     proc->parent = current;
     assert(current->wait_state == 0);
-    // 设置栈空间
+    // 建立内核栈
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
@@ -641,12 +647,20 @@ do_exit(int error_code) {
 }
 
 //load_icode_read is used by load_icode in LAB8
+/**
+ * 
+ * 调用文件系统,从磁盘加载数据
+ * 
+ * 从文件 fd 的 offset 处读取 len 个字节到 buf 中
+ */ 
 static int
 load_icode_read(int fd, void *buf, size_t len, off_t offset) {
+    // 1. 定位到 offset
     int ret;
     if ((ret = sysfile_seek(fd, offset, LSEEK_SET)) != 0) {
         return ret;
     }
+    // 2. 读取到 buf
     if ((ret = sysfile_read(fd, buf, len)) != len) {
         return (ret < 0) ? ret : -1;
     }
@@ -654,7 +668,12 @@ load_icode_read(int fd, void *buf, size_t len, off_t offset) {
 }
 
 // load_icode -  called by sys_exec-->do_execve
-  
+/**
+ * 核心中的核心:执行可执行文件
+ * 
+ * 什么是执行? 执行的条件是什么?
+ * 
+ */  
 static int
 load_icode(int fd, int argc, char **kargv) {
     /* LAB8:EXERCISE2 YOUR CODE  HINT:how to load the file with handler fd  in to process's memory? how to setup argc/argv?
@@ -689,9 +708,12 @@ load_icode(int fd, int argc, char **kargv) {
 
     int ret = -E_NO_MEM;
     struct mm_struct *mm;
+
+    /** 创建并初始化 mm **/
     if ((mm = mm_create()) == NULL) {
         goto bad_mm;
     }
+    /**  **/
     if (setup_pgdir(mm) != 0) {
         goto bad_pgdir_cleanup_mm;
     }
@@ -699,6 +721,7 @@ load_icode(int fd, int argc, char **kargv) {
     struct Page *page;
 
     struct elfhdr __elf, *elf = &__elf;
+    // (从磁盘)加载 elf 文件头
     if ((ret = load_icode_read(fd, elf, sizeof(struct elfhdr), 0)) != 0) {
         goto bad_elf_cleanup_pgdir;
     }
@@ -708,6 +731,7 @@ load_icode(int fd, int argc, char **kargv) {
         goto bad_elf_cleanup_pgdir;
     }
 
+    // (从磁盘)加载所有 elf program header
     struct proghdr __ph, *ph = &__ph;
     uint32_t vm_flags, perm, phnum;
     for (phnum = 0; phnum < elf->e_phnum; phnum ++) {
@@ -715,6 +739,8 @@ load_icode(int fd, int argc, char **kargv) {
         if ((ret = load_icode_read(fd, ph, sizeof(struct proghdr), phoff)) != 0) {
             goto bad_cleanup_mmap;
         }
+        
+        /*** elf program header 校验 begin ***/
         if (ph->p_type != ELF_PT_LOAD) {
             continue ;
         }
@@ -725,11 +751,15 @@ load_icode(int fd, int argc, char **kargv) {
         if (ph->p_filesz == 0) {
             continue ;
         }
+        /*** elf program header 校验 end ***/
+
+        // 根据elf 标志位 确认内存描述符属性
         vm_flags = 0, perm = PTE_U;
         if (ph->p_flags & ELF_PF_X) vm_flags |= VM_EXEC;
         if (ph->p_flags & ELF_PF_W) vm_flags |= VM_WRITE;
         if (ph->p_flags & ELF_PF_R) vm_flags |= VM_READ;
         if (vm_flags & VM_WRITE) perm |= PTE_W;
+        // 
         if ((ret = mm_map(mm, ph->p_va, ph->p_memsz, vm_flags, NULL)) != 0) {
             goto bad_cleanup_mmap;
         }
@@ -793,18 +823,19 @@ load_icode(int fd, int argc, char **kargv) {
     assert(pgdir_alloc_page(mm->pgdir, USTACKTOP-3*PGSIZE , PTE_USER) != NULL);
     assert(pgdir_alloc_page(mm->pgdir, USTACKTOP-4*PGSIZE , PTE_USER) != NULL);
     
-    mm_count_inc(mm);
+    mm_count_inc(mm);// mm 引用计数
+    // 安装 mm
     current->mm = mm;
     current->cr3 = PADDR(mm->pgdir);
     lcr3(PADDR(mm->pgdir));
 
-    //setup argc, argv
+    //计算 argc, argv
     uint32_t argv_size=0, i;
     for (i = 0; i < argc; i ++) {
         argv_size += strnlen(kargv[i],EXEC_MAX_ARG_LEN + 1)+1;
     }
-
-    uintptr_t stacktop = USTACKTOP - (argv_size/sizeof(long)+1)*sizeof(long);
+    // USTACKTOP 为固定值,每个进程的用户栈范围都相同
+    uintptr_t stacktop = USTACKTOP - (argv_size/sizeof(long)+1)*sizeof(long); // 用户栈顶,
     char** uargv=(char **)(stacktop  - argc * sizeof(char *));
     
     argv_size = 0;
@@ -814,14 +845,15 @@ load_icode(int fd, int argc, char **kargv) {
     }
     
     stacktop = (uintptr_t)uargv - sizeof(int);
-    *(int *)stacktop = argc;
-    
+    *(int *)stacktop = argc;    // 在栈顶处压入参数
+
+    //构造返回用户态的中断帧,用于从内核态返回,进入用户态,执行此执行文件的新的进程,在__alltraps 中应用.都是虚拟地址.
     struct trapframe *tf = current->tf;
     memset(tf, 0, sizeof(struct trapframe));
-    tf->tf_cs = USER_CS;
-    tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
-    tf->tf_esp = stacktop;
-    tf->tf_eip = elf->e_entry;
+    tf->tf_cs = USER_CS;                            // 用户代码段
+    tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;    // 用户数据段
+    tf->tf_esp = stacktop;                          // 用户栈
+    tf->tf_eip = elf->e_entry;                      // 此 elf 的入口
     tf->tf_eflags = FL_IF;
     ret = 0;
 out:
@@ -872,6 +904,14 @@ failed_cleanup:
 
 // do_execve - call exit_mmap(mm)&put_pgdir(mm) to reclaim memory space of current process
 //           - call load_icode to setup new memory space accroding binary prog.
+/**
+ * 核心的函数:执行用户程序
+ * 
+ * name: 程序名称
+ * argc: 参数数量
+ * argv[0]: path
+ * 
+ */ 
 int
 do_execve(const char *name, int argc, const char **argv) {
     static_assert(EXEC_MAX_ARG_LEN >= FS_MAX_FPATH_LEN);
@@ -921,6 +961,7 @@ do_execve(const char *name, int argc, const char **argv) {
         current->mm = NULL;
     }
     ret= -E_NO_MEM;;
+    //如何自然正常退出?
     if ((ret = load_icode(fd, argc, kargv)) != 0) {
         goto execve_exit;
     }
@@ -1014,6 +1055,11 @@ found:
 }
 
 // do_kill - kill process with pid by set this process's flags with PF_EXITING
+/**
+ * 如何 kill 一个进程?
+ * 
+ * 1. 设置其标志位状态为 PF_EXITING
+ */ 
 int
 do_kill(int pid) {
     struct proc_struct *proc;
@@ -1031,6 +1077,11 @@ do_kill(int pid) {
 }
 
 // kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
+/**
+ * 执行用户程序
+ * 
+ * name: 
+ */ 
 static int
 kernel_execve(const char *name, const char **argv) {
     int argc = 0, ret;
@@ -1076,6 +1127,7 @@ user_main(void *arg) {
 }
 
 // init_main - the second kernel thread used to create user_main kernel threads
+// initproc 内核线程执行函数
 static int
 init_main(void *arg) {
     int ret;
@@ -1133,7 +1185,7 @@ proc_init(void) {
 
     idleproc->pid = 0;
     idleproc->state = PROC_RUNNABLE;
-    idleproc->kstack = (uintptr_t)bootstack;
+    idleproc->kstack = (uintptr_t)bootstack;        // idle 的内核栈
     idleproc->need_resched = 1;
     
     if ((idleproc->filesp = files_create()) == NULL) {

@@ -1,19 +1,116 @@
-# ucore Lab4 实验笔记
+# ucore Lab4~Lab5 实验笔记 进程实现与管理
 
-**目的** 实现CPU 的虚拟化,让ucore 分时共享 CPU,实现多条控制流并发执行.
+## 1 什么是进程?进程的数据结构是怎样的?内核怎样管理进程?
 
-## 整体视角
+**概述**
+
+实现进程是为了实现 CPU 的虚拟化,让 ucore 分时共享 CPU,实现多条控制流并发执行.
+
+每个进程都有其生命周期,经历从出生到死亡的过程,所谓进程就是这个过程的执行过程.为了记录、描述和管理程序执行的动态变化过程，需要有一个数据结构，这就是进程控制块。进程与进程控制块是一一对应的。
+
+**进程控制块的设计**
+
+对内,进程**拥有资源**,对外,进程**被内核调度**.
+
+所以,一个进程控制块的字段分两方面,一种是对资源的描述,包括地址空间,栈地址,上下文等;一种是调度状态的描述,即当前状态,标识,与其他进程的关系等.
+
+**进程控制块**
+
+```C
+struct proc_struct {
+
+    /************ 内部资源描述 ************/
+    uintptr_t kstack;               // 进程内核栈.对于用户进程,是特权级发生改变时保存被打断的用户信息栈
+    struct mm_struct *mm;           // 进程的内存管理描述符,只用于用户态进程
+    struct context context;         // 进程上下文,用于Switch here to run process
+    struct trapframe *tf;           // 当前中断的中断帧 Trap frame
+    uintptr_t cr3;                  // 页目录(一级页表)基址
+
+    /************ 对外状态描述 ******~******/
+    enum proc_state state;          // 进程状态
+    int pid;                        // 进程 id
+    int runs;                       // 运行次数
+    struct proc_struct *parent;     // 父进程.树形结构.内核的 idleproc 没有父进程.
+    volatile bool need_resched;     // 是否需要重新调度以释放 cpu?意思是运行其他进程而暂停本进程
+    uint32_t flags;                 // 标志位
+    char name[PROC_NAME_LEN + 1];   // 进程名称
+    
+    list_entry_t list_link;         // 进程链表
+    list_entry_t hash_link;         // 进程哈希表
+};
+```
+
+在 ucore 中,内核进程,用户进程共用此结构.不考虑进程调度,在初始化完毕后,进程管理机制可由下图表示:
+
+![](/images/进程数据结构&#32;1.png)
+
+## 3 进程的内部资源有哪些,是如何维护的?
+
+**内存描述**
+
+进程通过`mm_struct`描述内存结构.
+
+**上下文**
+
+即 `context`,一堆寄存器,用于上下文切换时保存进程信息.
+
+**中断帧**
+
+即`trapframe`, 用于中断时保存用户进程状态.
+
+
+
+## 2 ucore 怎样维护进程,用到哪些变量?
+
+更好的说法是内核线程.因为在 ucore 的实现,内核态的几个"进程"共用全局的变量和共享资源.
+
+内核的三个进程直接由三个全局变量表示:
+
+- **idle**: 用于进程调度
+- **initproc**: 用于创建用户进程
+- **current**: 维护"当前"进程
+
+而用户态进程统一由全局的`proc_list`和`proc.c`私有的`hash_list`维护.
+
+## 3 进程
+
+## 如何创建一个新的(内核)进程?
+
+内核进程也是进程,创建内核进程调用`kernel_thread`函数,实际是对`do_fork`的封装.那么如何创建一个普通进程?
+
+对于一个进程的资源,有的是可以共享的,有的是无法共享的.
+
+首先考察一定无法共享的资源.什么资源一定无法共享?
+
+- 进程控制块本身
+- 内核栈空间
+  
+
+考察`do_fork`,可知新的 *用户态* 进程**共享**了"当前"进程的:
+
+- trapframe
+- stack pointer
+
+新的进程**创建**了新的:
+
+- 栈空间
+- 文件描述块
+- 内存描述符(mm等)
+
+而创建内核进程时,文件描述块和内存
+
+对于文件描述符的克隆结果如图所示:
+
+![](/images/fork-文件描述块.png)
 
 ## 怎样区分内核进程和用户进程?
 
 栈空间不同.
 
-`idle`: 没有 `trapframe`;`kstack`=`bootstack`
-`init`
-
-进程名称    trapframe   kstack
-"idle"  NULL    bootstack
-"init"  tf_cs = KERNEL_CS;tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
+进程名称 | trapframe | kstack
+-----|-----------|-------
+"idle" | NULL | bootstack
+"init" | tf_cs = KERNEL_CS;<br>tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;
 
 
 内核栈基址: `bootstack`
@@ -26,26 +123,7 @@
 - 内核线程控制块
 - 内核线程控制块链表
 
-**进程控制块**
 
-```C
-struct proc_struct {
-    enum proc_state state;          // 进程状态
-    int pid;                        // 进程 id
-    int runs;                       // 运行次数
-    uintptr_t kstack;               // 进程内核栈.对于用户进程,是特权级发生改变时保存被打断的用户信息栈
-    volatile bool need_resched;     // 是否需要重新调度以释放 cpu?意思是运行其他进程而暂停本进程
-    struct proc_struct *parent;     // 父进程.树形结构.内核的 idleproc 没有父进程.
-    struct mm_struct *mm;           // 进程的内存管理描述符,只用于用户态进程
-    struct context context;         // 进程上下文,用于Switch here to run process
-    struct trapframe *tf;           // 当前中断的中断帧 Trap frame
-    uintptr_t cr3;                  // 页目录(一级页表)基址
-    uint32_t flags;                 // 标志位
-    char name[PROC_NAME_LEN + 1];   // 进程名称
-    list_entry_t list_link;         // 进程链表
-    list_entry_t hash_link;         // 进程哈希表
-};
-```
 
 所谓的上下文其实就是一堆寄存器.
 
@@ -141,3 +219,6 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf);
 
 资源:1)虚拟地址空间 2)其他资源
 
+## 机制: 执行
+
+执行一个可执行文件,

@@ -45,18 +45,21 @@ typedef size_t ppn_t;
  * Rounding operations (efficient when n is a power of 2)
  * Round down to the nearest multiple of n
  * */
+// 把 a 向下取整至最近的 n 的倍数
 #define ROUNDDOWN(a, n) ({                                          \
             size_t __a = (size_t)(a);                               \
             (typeof(a))(__a - __a % (n));                           \
         })
 
 /* Round up to the nearest multiple of n */
+// 把 a 向上取整至最近的 n 的倍数
 #define ROUNDUP(a, n) ({                                            \
             size_t __n = (size_t)(n);                               \
             (typeof(a))(ROUNDDOWN((size_t)(a) + __n - 1, __n));     \
         })
 
 /* Round up the result of dividing of n */
+/**  把 a/n 的结果向上取整.如 33/4 结果为 9  **/
 #define ROUNDUP_DIV(a, n) ({                                        \
 uint32_t __n = (uint32_t)(n);                           \
 (typeof(a))(((a) + __n - 1) / __n);                     \

@@ -78,7 +78,7 @@ struct vma_struct *
 find_vma(struct mm_struct *mm, uintptr_t addr) {
     struct vma_struct *vma = NULL;
     if (mm != NULL) {
-        vma = mm->mmap_cache;
+        vma = mm->mmap_cache;   // 起点理论上随便(双向链表),这里可能考虑局部性所以选择了 mmap_cache
         if (!(vma != NULL && vma->vm_start <= addr && vma->vm_end > addr)) {
                 bool found = 0;
                 list_entry_t *list = &(mm->mmap_list), *le = list;
@@ -155,10 +155,16 @@ mm_destroy(struct mm_struct *mm) {
     kfree(mm); //kfree mm
     mm=NULL;
 }
-
+/**
+ * 
+ * 创建新的 vma 链接到给定的 mm 上.新的 vma 的参数由函数参数指定.
+ * 
+ */ 
 int
 mm_map(struct mm_struct *mm, uintptr_t addr, size_t len, uint32_t vm_flags,
        struct vma_struct **vma_store) {
+    // 新的 vma 的 start 由 addr 向下取PGSIZE 整数倍,
+    //            end   由(addr+len)向上取整 PGSIZE 整数倍.
     uintptr_t start = ROUNDDOWN(addr, PGSIZE), end = ROUNDUP(addr + len, PGSIZE);
     if (!USER_ACCESS(start, end)) {
         return -E_INVAL;

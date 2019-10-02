@@ -6,15 +6,16 @@
 #include <assert.h>
 
 #define WORD_TYPE           uint32_t
-#define WORD_BITS           (sizeof(WORD_TYPE) * CHAR_BIT)
+#define WORD_BITS           (sizeof(WORD_TYPE) * CHAR_BIT)  //4*8
 
 struct bitmap {
-    uint32_t nbits;
-    uint32_t nwords;
-    WORD_TYPE *map;
+    uint32_t nbits;     // bitmap 总位数
+    uint32_t nwords;    // bitmap 总word数,
+    WORD_TYPE *map;     // 指向位图起始地址
 };
 
 // bitmap_create - allocate a new bitmap object.
+// 创建一个 nbits 位的 bitmap
 struct bitmap *
 bitmap_create(uint32_t nbits) {
     static_assert(WORD_BITS != 0);
