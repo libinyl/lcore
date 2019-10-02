@@ -668,12 +668,7 @@ load_icode_read(int fd, void *buf, size_t len, off_t offset) {
 }
 
 // load_icode -  called by sys_exec-->do_execve
-/**
- * 核心中的核心:执行可执行文件
- * 
- * 什么是执行? 执行的条件是什么?
- * 
- */  
+
 static int
 load_icode(int fd, int argc, char **kargv) {
     /* LAB8:EXERCISE2 YOUR CODE  HINT:how to load the file with handler fd  in to process's memory? how to setup argc/argv?
@@ -905,7 +900,15 @@ failed_cleanup:
 // do_execve - call exit_mmap(mm)&put_pgdir(mm) to reclaim memory space of current process
 //           - call load_icode to setup new memory space accroding binary prog.
 /**
- * 核心的函数:执行用户程序
+ * 核心中的核心:执行可执行文件
+ * 
+ * 什么是执行? 执行的条件是什么?
+ * 对于执行的系统调用(exec),内核的作用是准备用户环境.这与其他的系统调用思维方式可能有所区别.
+ * 通常系统调用是一种"服务",不改变用户进程本身.
+ * 但是 exec 系统调用的目的就是将可执行文件实例化为一个程序,包括设置它的内存资源,设置进程的各种属性.
+ * 一个进程发起了 exec 系统调用,意味着它本身将被摧毁;
+ * 从 exec 返回时,将诞生一个新的进程.很是壮烈.
+ * 
  * 
  * name: 程序名称
  * argc: 参数数量
@@ -961,7 +964,6 @@ do_execve(const char *name, int argc, const char **argv) {
         current->mm = NULL;
     }
     ret= -E_NO_MEM;;
-    //如何自然正常退出?
     if ((ret = load_icode(fd, argc, kargv)) != 0) {
         goto execve_exit;
     }
@@ -1210,7 +1212,7 @@ proc_init(void) {
     assert(initproc != NULL && initproc->pid == 1);
 }
 
-// cpu_idle - at the end of kern_init, the first kernel thread idleproc will do below works
+// idle: 闲散的内核进程,不断地检测"当前进程"是否被指定暂时放弃资源.
 void
 cpu_idle(void) {
     while (1) {

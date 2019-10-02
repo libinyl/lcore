@@ -595,9 +595,10 @@ tlb_invalidate(pde_t *pgdir, uintptr_t la) {
 //                  - pa<->la with linear address la and the PDT pgdir
 /**
  * 
+ * 建立虚拟地址 la 到物理空间的的映射
  * 
- * 建立 
  * la: liner address,线性地址
+ * perm: permission,权限
  */ 
 struct Page *
 pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {

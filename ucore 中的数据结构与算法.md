@@ -29,7 +29,7 @@ struct proc_struct {
 
 最后形成的结构大概如图:
 
-![](/images/双向链表示例.png)
+![](https://github.com/libinyl/ucore-study/blob/master/images/%E5%8F%8C%E5%90%91%E9%93%BE%E8%A1%A8%E7%A4%BA%E4%BE%8B.png?raw=1)
 
 增,删,遍历都好说,直接调用`list.h`声明的函数即可.当遍历到某个节点后,如何对应到包含此节点的结构体?
 
@@ -90,5 +90,5 @@ hash32(uint32_t val, unsigned int bits) {
 
 经过哈希处理之后,每个哈希节点都称为表头,随元素增长分别延伸,如图.(注:理想情况下分布应较为均匀)
 
-![](/images/哈希表.png)
+![](https://github.com/libinyl/ucore-study/blob/master/images/%E5%93%88%E5%B8%8C%E8%A1%A8.png?raw=1)
 
