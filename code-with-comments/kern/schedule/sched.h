@@ -13,7 +13,7 @@ struct proc_struct;
 typedef struct {
     unsigned int expires;       // 此 itmer 的生命值(时间片的数量)
     struct proc_struct *proc;
-    list_entry_t timer_link;
+    list_entry_t timer_link;    // timer 所在的队列
 } timer_t;
 
 #define le2timer(le, member)            \

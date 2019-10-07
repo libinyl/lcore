@@ -146,13 +146,18 @@ add_timer(timer_t *timer) {
     local_intr_restore(intr_flag);
 }
 
+/**
+ * 删除 timer.
+ * 
+ * 如果要删除的timer 的时间片不为 0,就把它的时间片转移给它之后的 timer.
+ */ 
 void
 del_timer(timer_t *timer) {
     bool intr_flag;
     local_intr_save(intr_flag);
     {
         if (!list_empty(&(timer->timer_link))) {
-            if (timer->expires != 0) {
+            if (timer->expires != 0) { 
                 list_entry_t *le = list_next(&(timer->timer_link));
                 if (le != &timer_list) {
                     timer_t *next = le2timer(le, timer_link);
@@ -180,10 +185,10 @@ run_timer_list(void) {
         list_entry_t *le = list_next(&timer_list);
         if (le != &timer_list) {
             timer_t *timer = le2timer(le, timer_link);
-            assert(timer->expires != 0);
+            assert(timer->expires != 0);// 首个 timer 的生命不应该是 0
             // 刷新首个 timer 的时间
             timer->expires --;
-            // 找到第一个尚未过期的 timer 并唤醒
+            // 找到所有尚未过期的 timer 并唤醒对应进程
             while (timer->expires == 0) {
                 le = list_next(le);
                 struct proc_struct *proc = timer->proc;
@@ -193,6 +198,7 @@ run_timer_list(void) {
                 else {
                     warn("process %d's wait_state == 0.\n", proc->pid);
                 }
+                // 唤醒进程,即更新状态并从等待队列中移到就绪队列
                 wakeup_proc(proc);
                 // 移除唤醒进程的 timer
                 del_timer(timer);
@@ -202,6 +208,8 @@ run_timer_list(void) {
                 timer = le2timer(le, timer_link);
             }
         }
+        // 调用专用于时钟中断的调度函数,示意当前进程需要减少生命值并被调度
+        // 当一个进程的时间片降低至 0,则其应被标记为需被调度.
         sched_class_proc_tick(current);
     }
     local_intr_restore(intr_flag);

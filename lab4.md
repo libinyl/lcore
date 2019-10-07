@@ -272,3 +272,5 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf);
 ## 进程间切换保存的context 与中断时保存的 trapframe 有什么不同?
 
 前者是用户态进程-用户态进程的切换,只需保存少量寄存器;后者是用户态-内核态进程的切换,不仅要考虑寄存器,还要考虑内核栈地址,
+
+## fork 的时候是如何实现按需分配内存的?

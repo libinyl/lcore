@@ -95,9 +95,15 @@
 #define UTEXT               0x00800000                  // where user programs generally begin
 #define USTAB               USERBASE                    // the location of the user STABS data structure
 
+/**
+ * 判断所给的地址区间是否属于用户区,即位于 USERBASE 和 USERTOP 之内.
+ */ 
 #define USER_ACCESS(start, end)                     \
 (USERBASE <= (start) && (start) < (end) && (end) <= USERTOP)
 
+/**
+ * 判断所给的地址区间是否属于内核区,即位于 KERNBASE 和 KERNTOP 之内.
+ */ 
 #define KERN_ACCESS(start, end)                     \
 (KERNBASE <= (start) && (start) < (end) && (end) <= KERNTOP)
 

@@ -39,8 +39,13 @@ vma : virtual memory area, 连续虚拟内存空间, 通过线性链表和红黑
 //pre define
 struct mm_struct;
 
-// the virtual continuous memory area(vma)
-// 虚拟连续内存空间
+/**
+ * 虚拟连续内存空间 virtual continuous memory area(vma)
+ * 
+ * 维护地址空间的属性,主要用于处理 page fault.
+ * 
+ * 地址区间有哪些属性? 读/写/执行
+ */ 
 struct vma_struct {
     struct mm_struct *vm_mm; // 当前 vma 所在的 mm     | the set of vma using the same PDT 
     uintptr_t vm_start;      // start addr of vma    
@@ -52,6 +57,7 @@ struct vma_struct {
 #define le2vma(le, member)                  \
     to_struct((le), struct vma_struct, member)
 
+// vma 属性
 #define VM_READ                 0x00000001
 #define VM_WRITE                0x00000002
 #define VM_EXEC                 0x00000004

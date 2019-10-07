@@ -165,6 +165,12 @@ print_pgfault(struct trapframe *tf) {
             (tf->tf_err & 1) ? "protection fault" : "no page found");
 }
 
+/**
+ * page fault 处理函数.
+ * 
+ * 
+ * 
+ */ 
 static int
 pgfault_handler(struct trapframe *tf) {
     extern struct mm_struct *check_mm_struct;
@@ -223,7 +229,7 @@ trap_dispatch(struct trapframe *tf) {
 #endif
         /**
          * 时钟中断处理.
-         * 每经过 1 个时钟周期TICK_NUM,应当设置当前进程current->need_resched = 1
+         * 每经过 1 个时钟周期TICK_NUM,应当设置当前进程current->need_resched = 1,在 trap 返回前刷新调度.
          * kern/driver/clock.c
          * 
          * 1)更新系统时间;
@@ -267,7 +273,7 @@ trap_dispatch(struct trapframe *tf) {
 }
 
 /**
- * 处理并分发一个中断或异常.
+ * 处理并分发一个中断或异常,包括所有异常
  * 如果返回,则trapentry.S 恢复 cpu 之前的状态(栈上保存,以 trapframe 的结构),然后执行 iret返回.
  */ 
 void
@@ -278,8 +284,7 @@ trap(struct trapframe *tf) {
         trap_dispatch(tf);
     }
     else {
-        // keep a trapframe chain in stack
-        // 中断嵌套
+        // 在栈上维护一个 trapframe 链,用于处理中断嵌套
         //1 暂存当前进程的上一个 tf
         struct trapframe *otf = current->tf;
         //2 更新当前进程的 tf
@@ -294,10 +299,11 @@ trap(struct trapframe *tf) {
 
         // 只有用户态进程可以抢占.内核进程不可抢占
         if (!in_kernel) {
-            // 检查进程标志,是否被标记为自然退出
+            // 检查进程标志,是否被标记为希望"被"退出
             if (current->flags & PF_EXITING) {
                 do_exit(-E_KILLED);
             }
+            // 每次系统调用,当前进程都可能被标记为应被调度.此时进行调度刷新工作
             if (current->need_resched) {
                 schedule();
             }

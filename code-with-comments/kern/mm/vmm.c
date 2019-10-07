@@ -11,9 +11,8 @@
 
 /* 
   vmm design include two parts: mm_struct (mm) & vma_struct (vma)
-  mm is the memory manager for the set of continuous virtual memory  
-  area which have the same PDT. vma is a continuous virtual memory area.
-  There a linear link list for vma & a redblack link list for vma in mm.
+  mm 是使用同一 PDT 的连续虚拟内存区域(vma)的管理器.
+  链表关系: mm<->vma<->vma<->vma...
 ---------------
   mm related functions:
    golbal functions
@@ -59,7 +58,7 @@ mm_create(void) {
     return mm;
 }
 
-// vma_create - alloc a vma_struct & initialize it. (addr range: vm_start~vm_end)
+// vma_create - 分配一个 vma_struct 并初始化. (addr range: vm_start~vm_end)
 struct vma_struct *
 vma_create(uintptr_t vm_start, uintptr_t vm_end, uint32_t vm_flags) {
     struct vma_struct *vma = kmalloc(sizeof(struct vma_struct));
@@ -241,8 +240,8 @@ copy_from_user(struct mm_struct *mm, void *dst, const void *src, size_t len, boo
 
 /**
  * 
- * 
  * 把数据从内核区复制到用户区
+ * 考虑目标用户区地址合法性
  */ 
 bool
 copy_to_user(struct mm_struct *mm, void *dst, const void *src, size_t len) {
@@ -341,7 +340,7 @@ check_vma_struct(void) {
 
 struct mm_struct *check_mm_struct;
 
-// check_pgfault - check correctness of pgfault handler
+// check_pgfault - pgfault handler 测试函数
 static void
 check_pgfault(void) {
     size_t nr_free_pages_store = nr_free_pages();
@@ -386,54 +385,59 @@ check_pgfault(void) {
 //page fault number
 volatile unsigned int pgfault_num=0;
 
-/* do_pgfault - interrupt handler to process the page fault execption
- * @mm         : the control struct for a set of vma using the same PDT
- * @error_code : the error code recorded in trapframe->tf_err which is setted by x86 hardware
- * @addr       : the addr which causes a memory access exception, (the contents of the CR2 register)
+/**
+ * do_pgfault - page fault 中断处理函数,用于处理缺页异常.
+ * 
+ * @mm         : 使用同一 PDT 的 vma 集合的控制块
+ * @error_code : 由 x86 硬件设置的page fault 错误码,在trapframe->tf_err 中记录
+ * @addr       : 出发内存访问异常的地址.(也就是CR 寄存器的值)
  *
  * CALL GRAPH: trap--> trap_dispatch-->pgfault_handler-->do_pgfault
- * The processor provides ucore's do_pgfault function with two items of information to aid in diagnosing
- * the exception and recovering from it.
- *   (1) The contents of the CR2 register. The processor loads the CR2 register with the
- *       32-bit linear address that generated the exception. The do_pgfault fun can
- *       use this address to locate the corresponding page directory and page-table
- *       entries.
- *   (2) An error code on the kernel stack. The error code for a page fault has a format different from
- *       that for other exceptions. The error code tells the exception handler three things:
- *         -- The P flag   (bit 0) indicates whether the exception was due to a not-present page (0)
- *            or to either an access rights violation or the use of a reserved bit (1).
- *         -- The W/R flag (bit 1) indicates whether the memory access that caused the exception
- *            was a read (0) or write (1).
- *         -- The U/S flag (bit 2) indicates whether the processor was executing at user mode (1)
- *            or supervisor mode (0) at the time of the exception.
+ * 
+ * 处理器提供了两类信息用于缺页异常的诊断和恢复:
+ * 
+ *   (1) CR2 的值. 
+ *       处理器把触发缺页异常的地址加载到 CR2 寄存器里. do_pgfault可以使用此地址定位相应的 page directory
+ *       和 page table entry.
+ *   (2) 内核栈上的错误码.
+ *       缺页异常的错误码的格式比较特殊,跟其他错误的格式有所不同.
+ *       错误码包含三类信息:
+ *         --  P flag   (bit 0) 表示异常原因是 not-present page(0) 还是由于权限问题/使用了保留位
+ *                              indicates whether the exception was due to a not-present page (0)
+ *                              or to either an access rights violation or the use of a reserved bit (1).
+ *         --  W/R flag (bit 1) 表示触发异常的动作是读(0)还是写(1).
+ *         --  U/S flag (bit 2) 表示当异常发生时,处理器正处于用户态(1)还是内核态(0).
  */
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     int ret = -E_INVAL;
-    //try to find a vma which include addr
+    // 找到此地址所在的 vma
     struct vma_struct *vma = find_vma(mm, addr);
 
     pgfault_num++;
-    //If the addr is in the range of a mm's vma?
+    // 若未找到 vma,或找到的 vma 的起始地址不正常(大于 addr),则不合法
     if (vma == NULL || vma->vm_start > addr) {
         cprintf("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
-    //check the error_code
+    // 考察错误码,即 page fault 分类
+    // 错误码格式参考手册 6.15 节 p6-40 
     switch (error_code & 3) {
     default:
             /* error code flag : default is 3 ( W/R=1, P=1): write, present */
-    case 2: /* error code flag : (W/R=1, P=0): write, not present */
-        if (!(vma->vm_flags & VM_WRITE)) {
+    case 2: 
+        /* 错误码: 写入缺页地址 : (W/R=1, P=0) */
+        if (!(vma->vm_flags & VM_WRITE)) {// 属性校验结果异常
             cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
             goto failed;
         }
         break;
-    case 1: /* error code flag : (W/R=0, P=1): read, present */
+    case 1: /* 错误码: 读取存在的地址 : (W/R=0, P=1): read, present */
+        // 读取已存在页不应该出现错误码
         cprintf("do_pgfault failed: error code flag = read AND present\n");
         goto failed;
-    case 0: /* error code flag : (W/R=0, P=0): read, not present */
-        if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {
+    case 0: /* 错误码:读取缺页地址 (W/R=0, P=0): read, not present */
+        if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {// 属性校验结果异常
             cprintf("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
             goto failed;
         }
@@ -443,6 +447,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
      *    (read  an non_existed addr && addr is readable)
      * THEN
      *    continue process
+     * 
      */
     uint32_t perm = PTE_U;
     if (vma->vm_flags & VM_WRITE) {
@@ -453,10 +458,14 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     ret = -E_NO_MEM;
 
     pte_t *ptep=NULL;
-    /*LAB3 EXERCISE 1: YOUR CODE
-    * Maybe you want help comment, BELOW comments can help you finish the code
-    *
-    * Some Useful MACROs and DEFINEs, you can use them in below implementation.
+    /**
+     * 合法缺页异常的最终处理:
+     * 
+     * 
+     * 
+     * 
+     */ 
+    /*
     * MACROs or Functions:
     *   get_pte : get an pte and return the kernel virtual address of this pte for la
     *             if the PT contians this pte didn't exist, alloc a page for PT (notice the 3th parameter '1')
@@ -512,14 +521,12 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
         }
    }
 #endif
-    // try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
-    // (notice the 3th parameter '1')
+    // 1. 加载地址 addr对应的的页表项,不存在则创建
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
         cprintf("get_pte in do_pgfault failed\n");
         goto failed;
     }
-    
-    if (*ptep == 0) { // if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
+    if (*ptep == 0) { // 1. 若页表项中物理地址的值为空,则分配一个物理页并将 addr 映射过去
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;
@@ -549,6 +556,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
             goto failed;
            }
        } 
+       // 安装页表项
        page_insert(mm->pgdir, page, addr, perm);
        swap_map_swappable(mm, addr, page, 1);
        page->pra_vaddr = addr;
@@ -558,14 +566,24 @@ failed:
     return ret;
 }
 
-// 按页检查该虚拟空间是否属于用户态。防止用户进程向内核传递指向内核空间的指针。
-
+/**
+ * 按对于给定的mm,地址区间和读写属性,检查地址是否合法.
+ * 防止用户进程向内核传递指向内核空间的指针。
+ * 
+ * 合法的定义:调用此函数有两种情况:
+ *      1) 内核进程调用,此时 mm 为 NULL,则检查地址是否处于内核空间;
+ *      2) 内核态的用户进程调用,此时 mm 不为 NULL,则检查是否处于用户区间,且是否符合 mm 属性.读0 写1
+ *                      
+ */ 
 bool
 user_mem_check(struct mm_struct *mm, uintptr_t addr, size_t len, bool write) {
     if (mm != NULL) {
+    // 用户进程
+        // 1. 值区间检查
         if (!USER_ACCESS(addr, addr + len)) {
             return 0;
         }
+        // 2. 属性检查
         struct vma_struct *vma;
         uintptr_t start = addr, end = addr + len;
         while (start < end) {
@@ -584,9 +602,14 @@ user_mem_check(struct mm_struct *mm, uintptr_t addr, size_t len, bool write) {
         }
         return 1;
     }
+    // 内核进程
     return KERN_ACCESS(addr, addr + len);
 }
-
+/**
+ * 带合法性检测的字符串复制函数
+ * 
+ * 合法性定义: 从src到 src+maxn 必须可读
+ */ 
 bool
 copy_string(struct mm_struct *mm, char *dst, const char *src, size_t maxn) {
     size_t alen, part = ROUNDDOWN((uintptr_t)src + PGSIZE, PGSIZE) - (uintptr_t)src;
@@ -594,6 +617,7 @@ copy_string(struct mm_struct *mm, char *dst, const char *src, size_t maxn) {
         if (part > maxn) {
             part = maxn;
         }
+        // src 必须可读
         if (!user_mem_check(mm, (uintptr_t)src, part, 0)) {
             return 0;
         }
