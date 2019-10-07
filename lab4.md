@@ -23,24 +23,37 @@
 ```C
 struct proc_struct {
 
-    /************ 内部资源描述 ************/
+    /************ 进程静态属性 ************/
+    int pid;                        // 进程 id
+    char name[PROC_NAME_LEN + 1];   // 进程名称
+
+    /************ 内存和文件资源 ************/
     uintptr_t kstack;               // 进程内核栈.对于用户进程,是特权级发生改变时保存被打断的用户信息栈
     struct mm_struct *mm;           // 进程的内存管理描述符,只用于用户态进程
-    struct context context;         // 进程上下文,用于Switch here to run process
-    struct trapframe *tf;           // 当前中断的中断帧 Trap frame
+    struct context context;         // 进程上下文,主要用于进程间切换时保存状态
+    struct trapframe *tf;           // 当前中断的中断帧 Trap frame,主要用于中断时保存状态
     uintptr_t cr3;                  // 页目录(一级页表)基址
+    struct files_struct *filesp;    // 文件控制块
 
-    /************ 对外状态描述 ******~******/
-    enum proc_state state;          // 进程状态
-    int pid;                        // 进程 id
-    int runs;                       // 运行次数
+    /************ 进程间结构维护 ************/
     struct proc_struct *parent;     // 父进程.树形结构.内核的 idleproc 没有父进程.
-    volatile bool need_resched;     // 是否需要重新调度以释放 cpu?意思是运行其他进程而暂停本进程
-    uint32_t flags;                 // 标志位
-    char name[PROC_NAME_LEN + 1];   // 进程名称
-    
+    struct proc_struct *cptr, *yptr, *optr;     // children, younger,older 进程
+    int exit_code;                  // 退出代码 被送往父进程
     list_entry_t list_link;         // 进程链表
     list_entry_t hash_link;         // 进程哈希表
+
+    /************ 进程调度 ************/
+    enum proc_state state;          // 进程状态
+    uint32_t wait_state;            // 等待状态
+    int runs;                       // 运行次数
+    volatile bool need_resched;     // 是否需要重新调度以释放 cpu?意思是运行其他进程而暂停本进程
+    struct run_queue *rq;           // 包含当前进程的运行队列
+    list_entry_t run_link;          // 运行队列链接
+    int time_slice;                 // time slice for occupying the CPU
+    skew_heap_entry_t lab6_run_pool;// lab6: the entry in the run pool
+    uint32_t lab6_stride;           // lab6 the current stride of the process
+    uint32_t lab6_priority;         // lab6: process 权重, 被lab6_set_priority(uint32_t)设置
+    uint32_t flags;                 // 标志位
 };
 ```
 
@@ -250,3 +263,12 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf);
 ## 机制: 执行
 
 执行一个可执行文件,
+
+## 机制: 中断与调度
+
+- 每次的中断处理都有可能将当前进程设置为期待被重新调度.
+- 所以每次中断处理结束后,返回用户态之前,都会判断当前进程是否期待被调度.如果是,则进行调度.
+
+## 进程间切换保存的context 与中断时保存的 trapframe 有什么不同?
+
+前者是用户态进程-用户态进程的切换,只需保存少量寄存器;后者是用户态-内核态进程的切换,不仅要考虑寄存器,还要考虑内核栈地址,

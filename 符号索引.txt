@@ -2,4 +2,4 @@
 中断预处理  __alltraps
 中断处理    trap(struct trapframe *tf)
 执行文件    load_icode
-系统调用库函数    
+时钟中断

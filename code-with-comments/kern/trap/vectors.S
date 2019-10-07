@@ -1,6 +1,12 @@
 # handler
 .text
 .globl __alltraps
+
+# 定义每个中断的入口和地址
+
+# 1 压入errcode 或 0
+# 2 压入中断号
+
 .globl vector0
 vector0:
   pushl $0

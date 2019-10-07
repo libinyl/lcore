@@ -70,17 +70,17 @@ struct trapframe {
     uint16_t tf_ds;
     uint16_t tf_padding3;
     uint32_t tf_trapno;
-    /* below here defined by x86 hardware */
+    /* 下列字段由 x86 硬件定义 */
     uint32_t tf_err;
-    uintptr_t tf_eip;
+    uintptr_t tf_eip;   // 产生中断后
     uint16_t tf_cs;
     uint16_t tf_padding4;
     uint32_t tf_eflags;
-    /* below here only when crossing rings, such as from user to kernel */
+    /* 下列字段近用于跨级别调用,如从 user 跨入 kernel */
     uintptr_t tf_esp;
     uint16_t tf_ss;
     uint16_t tf_padding5;
-} __attribute__((packed));
+} __attribute__((packed));//取消结构在编译过程中的优化对齐,按照实际结构对齐.
 
 void idt_init(void);
 void print_trapframe(struct trapframe *tf);

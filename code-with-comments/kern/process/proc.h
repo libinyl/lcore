@@ -69,7 +69,7 @@ struct proc_struct {
     struct proc_struct *cptr, *yptr, *optr;     // children, younger,older 进程
     struct run_queue *rq;                       // 包含当前进程的运行队列
     list_entry_t run_link;                      // run queue 运行队列链接
-    int time_slice;                             // time slice for occupying the CPU
+    int time_slice;                             // 该进程当前可运行的时间片,每次timer 到时递减.初始为 5.从 5 到 0 期间称为时间片.到期则让给别的进程->进程置于rq 队尾,重置为 5. time slice for occupying the CPU
     skew_heap_entry_t lab6_run_pool;            // FOR LAB6 ONLY: the entry in the run pool
     uint32_t lab6_stride;                       // FOR LAB6 ONLY: the current stride of the process
     uint32_t lab6_priority;                     // FOR LAB6 ONLY: the priority of process, set by lab6_set_priority(uint32_t)

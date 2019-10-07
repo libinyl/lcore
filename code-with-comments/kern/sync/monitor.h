@@ -2,7 +2,11 @@
 #define __KERN_SYNC_MOINTOR_CONDVAR_H__
 
 #include <sem.h>
-/* In [OS CONCEPT] 7.7 section, the accurate define and approximate implementation of MONITOR was introduced.
+
+/**
+ * 管程实现.参考 [操作系统概念]7.7 节.
+ * 
+ * In [OS CONCEPT] 7.7 section, the accurate define and approximate implementation of MONITOR was introduced.
  * INTRODUCTION:
  *  Monitors were invented by C. A. R. Hoare and Per Brinch Hansen, and were first implemented in Brinch Hansen's
  *  Concurrent Pascal language. Generally, a monitor is a language construct and the compiler usually enforces mutual exclusion. Compare this with semaphores, which are usually an OS construct.
@@ -79,7 +83,7 @@ typedef struct monitor{
     condvar_t *cv;          // the condvars in monitor
 } monitor_t;
 
-// Initialize variables in monitor.
+// 初始化管程中的变量
 void     monitor_init (monitor_t *cvp, size_t num_cv);
 // Unlock one of threads waiting on the condition variable. 
 void     cond_signal (condvar_t *cvp);

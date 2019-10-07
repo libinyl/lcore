@@ -32,7 +32,6 @@ proc_stride_comp_f(void *a, void *b)
  *   - proc_num: 0
  *   - max_time_slice: no need here, the variable would be assigned by the caller.
  *
- * hint: see proj13.1/libs/list.h for routines of the list structures.
  */
 static void
 stride_init(struct run_queue *rq) {
@@ -140,13 +139,16 @@ stride_pick_next(struct run_queue *rq) {
  * denotes the time slices left for current
  * process. proc->need_resched is the flag variable for process
  * switching.
+ * 
+ * 每次时钟中断时应当调用的调度算法的功能,通常是减少进程的时间片.仅在时间中断的 ISR 中调用.
  */
 static void
 stride_proc_tick(struct run_queue *rq, struct proc_struct *proc) {
-     /* LAB6: YOUR CODE */
+     // 减少时间片
      if (proc->time_slice > 0) {
           proc->time_slice --;
      }
+     // 到期则暗示需要被调度
      if (proc->time_slice == 0) {
           proc->need_resched = 1;
      }

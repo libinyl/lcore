@@ -11,7 +11,7 @@ struct proc_struct;
  * 定时器--基于时间的调度机制
  */ 
 typedef struct {
-    unsigned int expires;       // 时钟节拍数,实际上是令此进程 sleep 时指定的时间(毫秒)
+    unsigned int expires;       // 此 itmer 的生命值(时间片的数量)
     struct proc_struct *proc;
     list_entry_t timer_link;
 } timer_t;
@@ -29,9 +29,7 @@ timer_init(timer_t *timer, struct proc_struct *proc, int expires) {
 
 struct run_queue;
 
-// The introduction of scheduling classes is borrrowed from Linux, and makes the 
-// core scheduler quite extensible. These classes (the scheduler modules) encapsulate 
-// the scheduling policies. 
+// 调度器类的设计借鉴了 linux 的设计思想,扩展性很强.这些类封装了调度策略.
 struct sched_class {
     // the name of sched_class
     const char *name;

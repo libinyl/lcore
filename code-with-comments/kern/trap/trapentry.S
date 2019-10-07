@@ -37,10 +37,20 @@
 
 
 # vectors.S 把所有 trap 发送到此
+# vectors
 .text
 .globl __alltraps
 __alltraps:
-    # push 寄存器值,在栈空间构造struct trapframe中断帧
+    # 中断陷入执行至此,由于 int 指令的结果,栈上已有
+    # | trapno  |
+    # |  errno  |
+    # |   eip   |
+    # |   cs    |
+    # |  eflags |
+    # |   ss    |
+    # |   sp    |
+
+    # 继续 push 寄存器值,以在栈空间构造struct trapframe中断帧.每个 pushl 都压入一个 uint32,对应 trapframe 中两个 uint16.
     pushl %ds
     pushl %es
     pushl %fs

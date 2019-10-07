@@ -221,24 +221,14 @@ trap_dispatch(struct trapframe *tf) {
     LAB3 : If some page replacement algorithm(such as CLOCK PRA) need tick to change the priority of pages, 
     then you can add code here. 
 #endif
-        /* LAB1 YOUR CODE : STEP 3 */
-        /* handle the timer interrupt */
-        /* (1) After a timer interrupt, you should record this event using a global variable (increase it), such as ticks in kern/driver/clock.c
-         * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
-         * (3) Too Simple? Yes, I think so!
-         */
-        /* LAB5 YOUR CODE */
-        /* you should upate you lab1 code (just add ONE or TWO lines of code):
-         *    Every TICK_NUM cycle, you should set current process's current->need_resched = 1
-         */
-        /* LAB6 YOUR CODE */
-        /* IMPORTANT FUNCTIONS:
-	     * run_timer_list
-	     *----------------------
-	     * you should update your lab5 code (just add ONE or TWO lines of code):
-         *    Every tick, you should update the system time, iterate the timers, and trigger the timers which are end to call scheduler.
-         *    You can use one funcitons to finish all these things.
-         */
+        /**
+         * 时钟中断处理.
+         * 每经过 1 个时钟周期TICK_NUM,应当设置当前进程current->need_resched = 1
+         * kern/driver/clock.c
+         * 
+         * 1)更新系统时间;
+         * 2)遍历 timer, and trigger the timers which are end to call scheduler.
+         */ 
         ticks ++;
         assert(current != NULL);
         run_timer_list();
@@ -301,6 +291,8 @@ trap(struct trapframe *tf) {
         trap_dispatch(tf);
         // 恢复上一个 tf
         current->tf = otf;
+
+        // 只有用户态进程可以抢占.内核进程不可抢占
         if (!in_kernel) {
             // 检查进程标志,是否被标记为自然退出
             if (current->flags & PF_EXITING) {
