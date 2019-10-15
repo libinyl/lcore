@@ -252,6 +252,7 @@ basic_check(void) {
 // NOTICE: You SHOULD NOT CHANGE basic_check, default_check functions!
 static void
 default_check(void) {
+    log("   开始检查内存分配函数.\n");
     int count = 0, total = 0;
     list_entry_t *le = &free_list;
     while ((le = list_next(le)) != &free_list) {

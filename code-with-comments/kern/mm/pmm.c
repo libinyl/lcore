@@ -335,6 +335,7 @@ pmm_init(void) {
     logline("初始化开始:内存管理模块");
     // 之前已经开启了paging
     boot_cr3 = PADDR(boot_pgdir);
+    log("内核页表基址: 0x%08lx\n",boot_cr3);
 
     //We need to alloc/free the physical memory (granularity is 4KB or other size). 
     //So a framework of physical memory manager (struct pmm_manager)is defined in pmm.h

@@ -18,6 +18,7 @@
 #include <proc.h>
 
 #define TICK_NUM 100
+#define LOG_INT_INFO 0
 
 static void print_ticks() {
     cprintf("%d ticks\n",TICK_NUM);
@@ -46,7 +47,6 @@ idt_init(void) {
      * 中断处理函数的入口地址定义在__vectors,位于kern/trap/vector.S
      */ 
     logline("初始化开始:中断向量表");
-    log("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
 
     extern uintptr_t __vectors[];
     int i;
@@ -58,13 +58,16 @@ idt_init(void) {
     lidt(&idt_pd);
 
     // 输出信息
-    for (i = 0; i < sizeof(idt) / sizeof(struct gatedesc); i ++) {
-        log("0x%x\t",i);
-        log("%s\t", idt[i].gd_type==STS_TG32?"y":"n");
-        log("%s\t", "GD_KTEXT");
-        log("0x%x\t", __vectors[i]);
-        log("%d",idt[i].gd_dpl);
-        log("\n");
+    if(LOG_INT_INFO){
+        log("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
+        for (i = 0; i < sizeof(idt) / sizeof(struct gatedesc); i ++) {
+            log("0x%x\t",i);
+            log("%s\t", idt[i].gd_type==STS_TG32?"y":"n");
+            log("%s\t", "GD_KTEXT");
+            log("0x%x\t", __vectors[i]);
+            log("%d",idt[i].gd_dpl);
+            log("\n");
+        }
     }
     logline("初始化完毕:中断向量表");
 }

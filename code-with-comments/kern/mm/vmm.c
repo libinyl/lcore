@@ -55,6 +55,7 @@ mm_create(void) {
         set_mm_count(mm, 0);
         sem_init(&(mm->mm_sem), 1);
     }    
+    log("初始化了一个 mm_struct.\n");
     return mm;
 }
 
@@ -68,6 +69,7 @@ vma_create(uintptr_t vm_start, uintptr_t vm_end, uint32_t vm_flags) {
         vma->vm_end = vm_end;
         vma->vm_flags = vm_flags;
     }
+    //log("创建了一个 vma. vm_start: %lu, vm_end: %lu, vm_flags: %u\n",vm_start, vm_end, vm_flags);
     return vma;
 }
 
@@ -275,16 +277,16 @@ check_vmm(void) {
 static void
 check_vma_struct(void) {
     size_t nr_free_pages_store = nr_free_pages();
+    log("   开始测试 vma结构.\n");
+    log("   测试点: 是否正确把 vma插入到 mm,是否有重叠,是否能从 mm 找到某个地址所在的 vma.\n");
 
     log("   当前空闲 page 数:%d\n",nr_free_pages_store);
 
-    // 1. ????????
     struct mm_struct *mm = mm_create();
     assert(mm != NULL);
 
     int step1 = 10, step2 = step1 * 10;
-
-    // 
+    log("   从 5 到 50, 以及从 55 到 500,每隔 5 个字节创建一个 vma, 长度是 2;全部插入到 mm 链表中.\n");
     int i;
     for (i = step1; i >= 1; i --) {
         struct vma_struct *vma = vma_create(i * 5, i * 5 + 2, 0);
@@ -297,6 +299,7 @@ check_vma_struct(void) {
         assert(vma != NULL);
         insert_vma_struct(mm, vma);
     }
+    log("   插入结束,mm 所维护的 vma 数量为%d\n",mm->map_count);
 
     list_entry_t *le = list_next(&(mm->mmap_list));
 
@@ -343,6 +346,7 @@ struct mm_struct *check_mm_struct;
 // check_pgfault - pgfault handler 测试函数
 static void
 check_pgfault(void) {
+    log("测试 page fault.\n");
     size_t nr_free_pages_store = nr_free_pages();
 
     check_mm_struct = mm_create();
@@ -352,6 +356,7 @@ check_pgfault(void) {
     pde_t *pgdir = mm->pgdir = boot_pgdir;
     assert(pgdir[0] == 0);
 
+    log("   创建一个页目录项对应大小的 vma(4096KB*1K), start=0, end=0x%08lx B= %d M, flag=write.\n",PTSIZE, PTSIZE/1024/1024);
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
     assert(vma != NULL);
 
