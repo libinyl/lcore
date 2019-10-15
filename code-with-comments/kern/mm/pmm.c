@@ -36,7 +36,7 @@ static struct taskstate ts = {0};
 
 // virtual address of physicall page array
 struct Page *pages;
-// amount of physical memory (in pages)
+// 需要管理的物理内存页数
 size_t npage = 0;
 
 // virtual address of boot-time page directory
@@ -146,12 +146,13 @@ gdt_init(void) {
     ltr(GD_TSS);
 }
 
-//init_pmm_manager - initialize a pmm_manager instance
+//init_pmm_manager - 配置一个内存管理器实例
 static void
 init_pmm_manager(void) {
     pmm_manager = &default_pmm_manager;
-    cprintf("memory management: %s\n", pmm_manager->name);
+    log("物理内存管理器名称: %s\n", pmm_manager->name);
     pmm_manager->init();
+    log("物理内存管理器实例- %s 初始化完毕.\n",pmm_manager->name);
 }
 
 //init_memmap - call pmm->init_memmap to build Page struct for free memory  
@@ -219,38 +220,60 @@ nr_free_pages(void) {
  */
 static void
 page_init(void) {
+    logline("初始化开始:分页式虚拟地址空间管理");
+    log("目标: 根据探测得到的物理地址空间,初始化 pages 表格.\n\n");
+    log("   内核已经定义了指向内存表格起始位置的指针 pages;也定义了内核加载到内存其自身的地址上限 end.");
+    log("   1. 由探测得到的物理地址分布,确定物理地址上限.");
+    //virtual addr (KERNBASE~KERNBASE+KMEMSIZE) = physical_addr (0~KMEMSIZE)
+    
     struct e820map *memmap = (struct e820map *)(0x8000 + KERNBASE);
-    uint64_t maxpa = 0;
+    uint64_t maxpa = 0; // 内核虚拟地址上限
 
-    cprintf("e820map:\n");
+    log("1) e820map信息报告:\n");
+    log("   共探测到%d块内存区域:\n\n",memmap->nr_map);
+
     int i;
     for (i = 0; i < memmap->nr_map; i ++) {
-        uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
-        cprintf("  memory: %08llx, [%08llx, %08llx], type = %d.\n",
-                memmap->map[i].size, begin, end - 1, memmap->map[i].type);
-        if (memmap->map[i].type == E820_ARM) {
-            if (maxpa < end && begin < KMEMSIZE) {
-                maxpa = end;
+        uint64_t range_begin = memmap->map[i].addr, range_end = range_begin + memmap->map[i].size;
+        log("   区间[%d]:[%08llx, %08llx], 大小: %08llx Byte(16), 类型: %d, ",
+                i, range_begin, range_end - 1, memmap->map[i].size,  memmap->map[i].type);
+
+        if (memmap->map[i].type == E820_ARM) {  // E820_ARM,ARM=address range memory,可用内存,值=1
+            log("系可用内存.\n");
+            if (maxpa < range_end && range_begin < KMEMSIZE) {
+                maxpa = range_end;              // 逐步调整内核虚拟地址上限
+                log("       调整内核虚拟地址上限至%08llx\n",maxpa);
             }
+        }else{
+            log("系不可用内存.\n");
         }
     }
     if (maxpa > KMEMSIZE) {
         maxpa = KMEMSIZE;
     }
 
-    extern char end[];
+    extern char end[];  //bootloader加载ucore的结束地址
 
     npage = maxpa / PGSIZE;
     pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
 
     for (i = 0; i < npage; i ++) {
-        SetPageReserved(pages + i);
+        SetPageReserved(pages + i); // 设置 pages 表格中 page 的属性为不可交换
     }
+    log("\n2) 物理内存维护表格 pages 初始化:\n     \n");
+
+    log("   由探测信息,得到物理内存上限为(以相对于KERNBASE内核虚拟地址形式):%08llx\n",maxpa);
+    log("   需要管理的内存页数:%d\n",npage);
+    log("   内核 end 的内核虚拟地址(向上取整后等于 pages 起始地址): %08llx\n",end);
+    log("   pages 表格自身内核虚拟地址区间:[%08lx,%08lx),已被设置为不可交换.\n\n",pages,((uintptr_t)pages + sizeof(struct Page) * npage));
 
     uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * npage);
 
+    log("   pages 表格结束于物理地址 freemem:%08lx.也是后序可用内存的起始地址.接下来将考察低于 freemem 管理的内存,将空闲区域标记为可用.\n",freemem);
+
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
+        log("   考察区间:[%08llx,%08llx).\n",begin,end);
         if (memmap->map[i].type == E820_ARM) {
             if (begin < freemem) {
                 begin = freemem;
@@ -262,11 +285,14 @@ page_init(void) {
                 begin = ROUNDUP(begin, PGSIZE);
                 end = ROUNDDOWN(end, PGSIZE);
                 if (begin < end) {
+                    log("   此区域 page 起始地址为%08lx,page 数量为%d.\n",pa2page(begin),(end - begin) / PGSIZE);
                     init_memmap(pa2page(begin), (end - begin) / PGSIZE);
                 }
             }
         }
     }
+    logline("初始化完毕:分页式虚拟地址空间管理");
+
 }
 
 //boot_map_segment - setup&enable the paging mechanism
@@ -304,6 +330,7 @@ boot_alloc_page(void) {
 //         - check the correctness of pmm & paging mechanism, print PDT&PT
 void
 pmm_init(void) {
+    logline("初始化开始:内存管理模块");
     // We've already enabled paging
     boot_cr3 = PADDR(boot_pgdir);
 
@@ -346,7 +373,7 @@ pmm_init(void) {
     print_pgdir();
     
     kmalloc_init();
-
+    logline("初始化完毕:内存管理模块");
 }
 
 //get_pte - get pte and return the kernel virtual address of this pte for la

@@ -122,6 +122,11 @@ typedef pte_t swap_entry_t; //the pte can also be a swap entry
 #define E820_ARM            1       // address range memory
 #define E820_ARR            2       // address range reserved
 
+/**
+ * 当请求BIOS中断号15H，并且置操作码AX=E820H的时候，
+ * BIOS就会向调用者报告可用的物理地址区间等信息，e820由此得名。
+ * e820map: 物理内存探测器
+ */ 
 struct e820map {
     int nr_map;
     struct {
@@ -150,7 +155,7 @@ struct Page {
 #define PG_reserved                 0       // the page descriptor is reserved for kernel or unusable
 #define PG_property                 1       // the member 'property' is valid
 
-#define SetPageReserved(page)       set_bit(PG_reserved, &((page)->flags))
+#define SetPageReserved(page)       set_bit(PG_reserved, &((page)->flags)) // 标记为从不换出
 #define ClearPageReserved(page)     clear_bit(PG_reserved, &((page)->flags))
 #define PageReserved(page)          test_bit(PG_reserved, &((page)->flags))
 #define SetPageProperty(page)       set_bit(PG_property, &((page)->flags))

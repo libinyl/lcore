@@ -254,20 +254,25 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
     return 0;
 }
 
-/* *
- * print_kerninfo - print the information about kernel, including the location
- * of kernel entry, the start addresses of data and text segements, the start
- * address of free memory and how many memory that kernel has used.
- * */
+/**
+ * 打印内核信息.
+ * - entry  内核入口
+ * - etext  内核代码段
+ * - edata  内核数据段起始地址(物理)
+ * - end    可用内存起始地址(物理)
+ * - 内核占用的内存量
+ */ 
 void
 print_kerninfo(void) {
+    logline("内核镜像信息输出开始");
     extern char etext[], edata[], end[], kern_init[];
-    cprintf("Special kernel symbols:\n");
-    cprintf("  entry  0x%08x (phys)\n", kern_init);
-    cprintf("  etext  0x%08x (phys)\n", etext);
-    cprintf("  edata  0x%08x (phys)\n", edata);
-    cprintf("  end    0x%08x (phys)\n", end);
-    cprintf("Kernel executable memory footprint: %dKB\n", (end - kern_init + 1023)/1024);
+    cprintf("内核镜像定义的特殊符号:\n");
+    cprintf("  entry(内核入口)                  0x%08x (phys)\n", kern_init);
+    cprintf("  etext(内核代码段起始地址))     0x%08x (phys)\n", etext);
+    cprintf("  edata(内核数据段起始地址)      0x%08x (phys)\n", edata);
+    cprintf("  end(可用内存地址起始地址))     0x%08x (phys)\n", end);
+    cprintf("内核自身占用内存: %dKB\n", (end - kern_init + 1023)/1024);
+    logline("内核镜像信息输出结束");
 }
 
 /* *

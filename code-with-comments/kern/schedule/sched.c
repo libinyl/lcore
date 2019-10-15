@@ -102,6 +102,7 @@ wakeup_proc(struct proc_struct *proc) {
  */ 
 void
 schedule(void) {
+    //cprintf("进入 schedule函数!\n");
     bool intr_flag;
     struct proc_struct *next;
     local_intr_save(intr_flag);

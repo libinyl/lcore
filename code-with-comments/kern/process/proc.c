@@ -298,7 +298,7 @@ find_proc(int pid) {
 //      构造新的内核态的 trapframe,用于 do_fork 中复制.
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
-    struct trapframe;
+    struct trapframe tf;
     memset(&tf, 0, sizeof(struct trapframe));
     // 初始化内核中断帧
     tf.tf_cs = KERNEL_CS;                           // 内核代码段
@@ -1215,6 +1215,7 @@ proc_init(void) {
 // idle: 闲散的内核进程,不断地检测"当前进程"是否被指定暂时放弃资源.
 void
 cpu_idle(void) {
+    cprintf("进入 cpu_idle 函数\n");
     while (1) {
         if (current->need_resched) {
             schedule();

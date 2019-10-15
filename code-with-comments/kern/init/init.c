@@ -37,12 +37,11 @@ kern_init(void) {
 
     cons_init();                // init the console
 
-    const char *message = "(THU.CST) os is loading ...";
-    cprintf("%s\n\n", message);
+    logline("控制台输出初始化完毕,获得输出调试信息能力");
 
     print_kerninfo();
 
-    grade_backtrace();
+    //grade_backtrace();
 
     pmm_init();                 // init physical memory management
 

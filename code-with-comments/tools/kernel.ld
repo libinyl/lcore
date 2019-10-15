@@ -55,7 +55,7 @@ SECTIONS {
         *(.bss)
     }
 
-    PROVIDE(end = .);
+    PROVIDE(end = .);/* bootloader加载ucore的结束地址 */
 
     /DISCARD/ : {
         *(.eh_frame .note.GNU-stack)

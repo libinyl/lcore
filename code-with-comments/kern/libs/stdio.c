@@ -4,6 +4,8 @@
 #include <unistd.h>
 /* HIGH level console I/O */
 
+#define LOG_ON 1
+
 /* *
  * cputch - writes a single character @c to stdout, and it will
  * increace the value of counter pointed by @cnt.
@@ -76,3 +78,18 @@ getchar(void) {
     return c;
 }
 
+int
+log(const char *fmt, ...) {
+    if(!LOG_ON) 
+        return;
+    va_list ap;
+    int cnt;
+    va_start(ap, fmt);
+    cnt = vcprintf(fmt, ap);
+    va_end(ap);
+    return cnt;
+}
+void logline(const char *str) {
+    log("\n\n--------------%s--------------\n\n",str);
+
+}
