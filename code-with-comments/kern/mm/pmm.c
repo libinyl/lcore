@@ -222,12 +222,14 @@ static void
 page_init(void) {
     logline("初始化开始:分页式虚拟地址空间管理");
     log("目标: 根据探测得到的物理地址空间,初始化 pages 表格.\n\n");
+    log("     1. 通过 ends 确定 pages 基址;\n");
+    log("     2. 通过探测结果,结合内核规格,确定 pages 可管理的内存上限.*可管理内存上限 = min{maxpa,KMEMSIZE}*;\n");
     log("   内核已经定义了指向内存表格起始位置的指针 pages;也定义了内核加载到内存其自身的地址上限 end.");
     log("   1. 由探测得到的物理地址分布,确定物理地址上限.");
     //virtual addr (KERNBASE~KERNBASE+KMEMSIZE) = physical_addr (0~KMEMSIZE)
     
     struct e820map *memmap = (struct e820map *)(0x8000 + KERNBASE);
-    uint64_t maxpa = 0; // 内核虚拟地址上限
+    uint64_t maxpa = 0;     // 可管理物理空间上限,最大不超过 KMEMSIZE
 
     log("1) e820map信息报告:\n");
     log("   共探测到%d块内存区域:\n\n",memmap->nr_map);
@@ -235,21 +237,21 @@ page_init(void) {
     int i;
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t range_begin = memmap->map[i].addr, range_end = range_begin + memmap->map[i].size;
-        log("   区间[%d]:[%08llx, %08llx], 大小: %08llx Byte(16), 类型: %d, ",
-                i, range_begin, range_end - 1, memmap->map[i].size,  memmap->map[i].type);
+        log("   区间[%d]:[%08llx, %08llx], 大小: %d Byte,\t类型: %d, ",
+                i, range_begin, range_end - 1, memmap->map[i].size, memmap->map[i].type);
 
         if (memmap->map[i].type == E820_ARM) {  // E820_ARM,ARM=address range memory,可用内存,值=1
             log("系可用内存.\n");
             if (maxpa < range_end && range_begin < KMEMSIZE) {
-                maxpa = range_end;              // 逐步调整内核虚拟地址上限
-                log("       调整内核虚拟地址上限至%08llx\n",maxpa);
+                maxpa = range_end;
+                log("       调整已知物理空间上限至%08llx\n",maxpa);
             }
         }else{
             log("系不可用内存.\n");
         }
     }
-    if (maxpa > KMEMSIZE) {
-        maxpa = KMEMSIZE;
+    if (maxpa > KMEMSIZE) { //可管理物理空间上限不超过 KMEMSIZE=0x38000000
+        maxpa = KMEMSIZE;   
     }
 
     extern char end[];  //bootloader加载ucore的结束地址
@@ -331,7 +333,7 @@ boot_alloc_page(void) {
 void
 pmm_init(void) {
     logline("初始化开始:内存管理模块");
-    // We've already enabled paging
+    // 之前已经开启了paging
     boot_cr3 = PADDR(boot_pgdir);
 
     //We need to alloc/free the physical memory (granularity is 4KB or other size). 
@@ -339,13 +341,13 @@ pmm_init(void) {
     //First we should init a physical memory manager(pmm) based on the framework.
     //Then pmm can alloc/free the physical memory. 
     //Now the first_fit/best_fit/worst_fit/buddy_system pmm are available.
+    // 初始化物理内存分配器,之后即可使用其 alloc/free 的功能
     init_pmm_manager();
 
-    // detect physical memory space, reserve already used memory,
-    // then use pmm->init_memmap to create free page list
+    // 探测物理内存分布,标记已经使用的内存,然后调用 pmm->init_memmap 来初始化 freelist
     page_init();
 
-    //use pmm->check to verify the correctness of the alloc/free function in a pmm
+    // 测试pmm 的alloc/free
     check_alloc_page();
 
     check_pgdir();

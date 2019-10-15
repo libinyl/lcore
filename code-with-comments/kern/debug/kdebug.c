@@ -264,15 +264,15 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
  */ 
 void
 print_kerninfo(void) {
-    logline("内核镜像信息输出开始");
+    logline("内核规格");
     extern char etext[], edata[], end[], kern_init[];
-    cprintf("内核镜像定义的特殊符号:\n");
-    cprintf("  entry(内核入口)                  0x%08x (phys)\n", kern_init);
-    cprintf("  etext(内核代码段起始地址))     0x%08x (phys)\n", etext);
-    cprintf("  edata(内核数据段起始地址)      0x%08x (phys)\n", edata);
-    cprintf("  end(可用内存地址起始地址))     0x%08x (phys)\n", end);
-    cprintf("内核自身占用内存: %dKB\n", (end - kern_init + 1023)/1024);
-    logline("内核镜像信息输出结束");
+    log("  entry(执行入口)              0x%08x (phys)\n", kern_init);
+    log("  etext(代码段起始地址))       0x%08x (phys)\n", etext);
+    log("  edata(数据段起始地址)        0x%08x (phys)\n", edata);
+    log("  end(镜像文件上边界))         0x%08x (phys)\n", end);
+    log("  内核文件自身占用内存:        %dKB\n", (end - kern_init + 1023)/1024);
+    log("  内核可管理物理内存大小上限:  0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
+    log("  内核运行期虚拟地址基址:      0x%08lx = %d M\n",KERNBASE, KERNBASE/1024/1024);
 }
 
 /* *

@@ -30,7 +30,7 @@
 #define USER_DS     ((GD_UDATA) | DPL_USER)
 
 /* *
- * Virtual memory map:                                          Permissions
+ * 虚拟地址空间分布 map:                                            权限
  *                                                              kernel/user
  *
  *     4G ------------------> +---------------------------------+
@@ -43,7 +43,7 @@
  *                            |        Invalid Memory (*)       | --/--
  *     KERNTOP -------------> +---------------------------------+ 0xF8000000
  *                            |                                 |
- *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE
+ *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE = 896MB
  *                            |                                 |
  *     KERNBASE ------------> +---------------------------------+ 0xC0000000
  *                            |        Invalid Memory (*)       | --/--
@@ -70,9 +70,9 @@
  *
  * */
 
-/* All physical memory mapped at this address */
-#define KERNBASE            0xC0000000
-#define KMEMSIZE            0x38000000                  // the maximum amount of physical memory
+/* 所有可管理的物理地址空间的映射: [0,KMEMSIZE)->[KERNBASE,KERNBASE+KMEMSIZE) */
+#define KERNBASE            0xC0000000                  // 内核运行态虚拟地址
+#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
 /* *
