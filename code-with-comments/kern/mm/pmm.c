@@ -214,37 +214,34 @@ nr_free_pages(void) {
 /**
  * 初始化内存管理
  * 
- * 1. 使用 
- * 
- * 
  */
 static void
 page_init(void) {
     logline("初始化开始:分页式虚拟地址空间管理");
-    log("目标: 根据探测得到的物理地址空间,初始化 pages 表格.\n\n");
-    log("     1. 通过 ends 确定 pages 基址;\n");
-    log("     2. 通过探测结果,结合内核规格,确定 pages 可管理的内存上限.*可管理内存上限 = min{maxpa,KMEMSIZE}*;\n");
-    log("   内核已经定义了指向内存表格起始位置的指针 pages;也定义了内核加载到内存其自身的地址上限 end.");
-    log("   1. 由探测得到的物理地址分布,确定物理地址上限.");
-    //virtual addr (KERNBASE~KERNBASE+KMEMSIZE) = physical_addr (0~KMEMSIZE)
-    
+    log("目标: 根据探测得到的物理空间分布,初始化 pages 表格.\n\n");
+    log("     1. 确定 pages 基址. 通过 ends 向上取整得到.\n");
+    log("     2. 确定 page 数 npages,即 可管理内存的页数.\n");
+    log("           2.1 确定实际管理的物理内存大小maxpa.即向上取探测结果中的最大可用地址,但不得大于管理上限 KMEMSIZE. maxpa = min{maxpa, KMEMSIZE}.\n");
+    log("           2.2 npage = maxpa/PAGESIZE.\n");
+    log("     3. 确定可管理内存中每个空闲 page 的属性,便于日后的换入换出的调度; 加入到 freelist 中.\n\n");
+
     struct e820map *memmap = (struct e820map *)(0x8000 + KERNBASE);
     uint64_t maxpa = 0;     // 可管理物理空间上限,最大不超过 KMEMSIZE
 
-    log("1) e820map信息报告:\n");
+    log("1) e820map信息报告:\n\n");
     log("   共探测到%d块内存区域:\n\n",memmap->nr_map);
 
     int i;
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t range_begin = memmap->map[i].addr, range_end = range_begin + memmap->map[i].size;
-        log("   区间[%d]:[%08llx, %08llx], 大小: %d Byte,\t类型: %d, ",
+        log("   区间[%d]:[%08llx, %08llx], 大小: 0x%08llx Byte, 类型: %d, ",
                 i, range_begin, range_end - 1, memmap->map[i].size, memmap->map[i].type);
 
         if (memmap->map[i].type == E820_ARM) {  // E820_ARM,ARM=address range memory,可用内存,值=1
             log("系可用内存.\n");
             if (maxpa < range_end && range_begin < KMEMSIZE) {
                 maxpa = range_end;
-                log("       调整已知物理空间上限至%08llx\n",maxpa);
+                log("       调整已知物理空间最大值 maxpa 至 0x%08llx\n",maxpa);
             }
         }else{
             log("系不可用内存.\n");
@@ -264,14 +261,17 @@ page_init(void) {
     }
     log("\n2) 物理内存维护表格 pages 初始化:\n     \n");
 
-    log("   由探测信息,得到物理内存上限为(以相对于KERNBASE内核虚拟地址形式):%08llx\n",maxpa);
-    log("   需要管理的内存页数:%d\n",npage);
-    log("   内核 end 的内核虚拟地址(向上取整后等于 pages 起始地址): %08llx\n",end);
-    log("   pages 表格自身内核虚拟地址区间:[%08lx,%08lx),已被设置为不可交换.\n\n",pages,((uintptr_t)pages + sizeof(struct Page) * npage));
+    log("   实际管理物理内存大小 maxpa = 0x%08llx = %dM\n",maxpa,maxpa/1024/1024);
+    log("   需要管理的内存页数 npage = maxpa/PGSIZE = %d\n", npage);
+    log("   内核文件地址边界 end: 0x%08llx\n",end);
+    log("   表格起始地址 pages = ROUNDUP(end) = 0x%08lx = %d M\n", (uintptr_t)pages, (uintptr_t)pages/1024/1024);
+    log("   pages 表格自身内核虚拟地址区间 [pages,pages*n): [0x%08lx, 0x%08lx)B=[%d, %d)M,已被设置为不可交换.\n",pages,((uintptr_t)pages + sizeof(struct Page) * npage), (uintptr_t)pages/1024/1024, ((uintptr_t)pages + sizeof(struct Page) * npage)/1024/1024);
 
     uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * npage);
 
-    log("   pages 表格结束于物理地址 freemem:%08lx.也是后序可用内存的起始地址.接下来将考察低于 freemem 管理的内存,将空闲区域标记为可用.\n",freemem);
+    log("   pages 表格结束于物理地址 freemem :0x%08lxB = %dM. 也是后序可用内存的起始地址. \n\n",freemem, freemem/1024/1024);
+    log("   考察低于 freemem 管理的内存, 将空闲区域标记为可用.\n");
+
 
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
@@ -287,7 +287,7 @@ page_init(void) {
                 begin = ROUNDUP(begin, PGSIZE);
                 end = ROUNDDOWN(end, PGSIZE);
                 if (begin < end) {
-                    log("   此区域 page 起始地址为%08lx,page 数量为%d.\n",pa2page(begin),(end - begin) / PGSIZE);
+                    log("       此区域 page 起始地址为%08lx,page 数量为%d.\n",pa2page(begin),(end - begin) / PGSIZE);
                     init_memmap(pa2page(begin), (end - begin) / PGSIZE);
                 }
             }
@@ -344,7 +344,7 @@ pmm_init(void) {
     // 初始化物理内存分配器,之后即可使用其 alloc/free 的功能
     init_pmm_manager();
 
-    // 探测物理内存分布,标记已经使用的内存,然后调用 pmm->init_memmap 来初始化 freelist
+    // 探测物理内存分布,初始化 pages, 然后调用 pmm->init_memmap 来初始化 freelist
     page_init();
 
     // 测试pmm 的alloc/free

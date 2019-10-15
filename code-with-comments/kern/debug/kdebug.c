@@ -266,13 +266,15 @@ void
 print_kerninfo(void) {
     logline("内核规格");
     extern char etext[], edata[], end[], kern_init[];
-    log("  entry(执行入口)              0x%08x (phys)\n", kern_init);
-    log("  etext(代码段起始地址))       0x%08x (phys)\n", etext);
-    log("  edata(数据段起始地址)        0x%08x (phys)\n", edata);
-    log("  end(镜像文件上边界))         0x%08x (phys)\n", end);
-    log("  内核文件自身占用内存:        %dKB\n", (end - kern_init + 1023)/1024);
-    log("  内核可管理物理内存大小上限:  0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
-    log("  内核运行期虚拟地址基址:      0x%08lx = %d M\n",KERNBASE, KERNBASE/1024/1024);
+    log("   entry(执行入口)              0x%08x (phys) ≈ %d M\n", kern_init, (unsigned int)kern_init/1024/1024);
+    log("   etext(代码段起始地址))       0x%08x (phys) ≈ %d M\n", etext, (unsigned int)etext/1024/1024);
+    log("   edata(数据段起始地址)        0x%08x (phys) ≈ %d M\n", edata, (unsigned int)edata/1024/1024);
+    log("   end(镜像文件上边界))         0x%08x (phys) ≈ %d M\n", end, (unsigned int)end/1024/1024);
+    log("   内核文件自身占用内存:        %d KB\n", (end - kern_init + 1023)/1024);
+    log("   内核可管理物理内存大小上限:  0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
+    log("   内核虚拟地址区间(B):         [0x%08lx , 0x%08lx)\n",KERNBASE, KERNBASE + KMEMSIZE);
+    log("   内核虚拟地址区间(M):         [%d M, %d M)\n", KERNBASE/1024/1024, (KERNBASE + KMEMSIZE)/1024/1024);
+    log("   内存分页大小 PGSIZE:         %d KB\n\n", PGSIZE);
 }
 
 /* *

@@ -252,31 +252,31 @@ copy_to_user(struct mm_struct *mm, void *dst, const void *src, size_t len) {
     return 1;
 }
 
-// vmm_init - initialize virtual memory management
+// vmm_init - 初始化虚拟内存管理模块
 //          - now just call check_vmm to check correctness of vmm
 void
 vmm_init(void) {
+    logline("测试开始:虚拟内存管理模块(vmm)");
     check_vmm();
+    logline("测试结束:虚拟内存管理模块(vmm)");
+
 }
 
 // check_vmm - check correctness of vmm
 static void
 check_vmm(void) {
-    size_t nr_free_pages_store = nr_free_pages();
-    
     check_vma_struct();
     check_pgfault();
-
-    //assert(nr_free_pages_store == nr_free_pages());
 
     cprintf("check_vmm() succeeded.\n");
 }
 
 // https://chyyuu.gitbooks.io/ucore_os_docs/content/lab3/lab3_5_2_page_swapping_principles.html
-
 static void
 check_vma_struct(void) {
     size_t nr_free_pages_store = nr_free_pages();
+
+    log("   当前空闲 page 数:%d\n",nr_free_pages_store);
 
     // 1. ????????
     struct mm_struct *mm = mm_create();
