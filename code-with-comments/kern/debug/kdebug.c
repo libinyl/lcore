@@ -264,17 +264,28 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
  */ 
 void
 print_kerninfo(void) {
-    logline("内核规格");
+
+    logline("历史过程");
+    log("we know: CPU 启动,执行 BIOS, 从磁盘上第一个扇区加载(bootloader)并执行.\n");
+    log("we want: 让 cpu 正确加载 bootloader,也就是说要生成正确的虚拟磁盘文件.\n");
+    log("we do: ");
+    log("we test:");
+
+    logline("内核设计规格");
     extern char etext[], edata[], end[], kern_init[];
     log("   entry(执行入口)              0x%08x (phys) ≈ %d M\n", kern_init, (unsigned int)kern_init/1024/1024);
     log("   etext(代码段起始地址))       0x%08x (phys) ≈ %d M\n", etext, (unsigned int)etext/1024/1024);
     log("   edata(数据段起始地址)        0x%08x (phys) ≈ %d M\n", edata, (unsigned int)edata/1024/1024);
     log("   end(镜像文件上边界))         0x%08x (phys) ≈ %d M\n", end, (unsigned int)end/1024/1024);
-    log("   内核文件自身占用内存:        %d KB\n", (end - kern_init + 1023)/1024);
+    log("   内核预计文件占用最大内存:      4MB\n");
+    log("   内核文件实际占用内存:        %d KB\n", (end - kern_init + 1023)/1024);
     log("   内核可管理物理内存大小上限:  0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
     log("   内核虚拟地址区间(B):         [0x%08lx , 0x%08lx)\n",KERNBASE, KERNBASE + KMEMSIZE);
     log("   内核虚拟地址区间(M):         [%d M, %d M)\n", KERNBASE/1024/1024, (KERNBASE + KMEMSIZE)/1024/1024);
-    log("   内存分页大小 PGSIZE:         %d KB\n\n", PGSIZE);
+    log("   内存分页大小 :               %d KB\n\n", PGSIZE);
+
+    
+
 }
 
 /* *

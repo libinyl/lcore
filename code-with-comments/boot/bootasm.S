@@ -1,23 +1,23 @@
 #include <asm.h>
 
-# Start the CPU: switch to 32-bit protected mode, jump into C.
-# The BIOS loads this code from the first sector of the hard disk into
-# memory at physical address 0x7c00 and starts executing in real mode
-# with %cs=0 %ip=7c00.
+# CPU 启动: 跳转到 32 位保护模式,调用 C 代码.
+# BIOS 从硬盘上的第一块扇区把此代码加载到物理内存 0x7c00 处,并在实模式下运行,初始 cs=0,ip=7c00.
 
-.set PROT_MODE_CSEG,        0x8                     # kernel code segment selector
-.set PROT_MODE_DSEG,        0x10                    # kernel data segment selector
-.set CR0_PE_ON,             0x1                     # protected mode enable flag
+# 参考 https://www.cnblogs.com/maruixin/p/3175894.html
+
+.set PROT_MODE_CSEG,        0x8                     # 内核代码段选择子 kernel code segment selector
+.set PROT_MODE_DSEG,        0x10                    # 内核数据段选择子 kernel data segment selector
+.set CR0_PE_ON,             0x1                     # 保护模式位 protected mode enable flag
 .set SMAP,                  0x534d4150
 
-# start address should be 0:7c00, in real mode, the beginning address of the running bootloader
+# 第一条指令指定地址应为 0:7c00, 即运行态bootloader 的起始地址
 .globl start
 start:
-.code16                                             # Assemble for 16-bit mode
-    cli                                             # Disable interrupts
-    cld                                             # String operations increment
+.code16                                             # 当前 CPU 处于实模式,所以需要在 16-bit 模式下编译.
+    cli                                             # 关中断
+    cld                                             # 设置字符串操作是递增方向(direct flag标志位清零)
 
-    # Set up the important data segment registers (DS, ES, SS).
+    # 设置重要的段寄存器(置零)(DS, ES, SS)
     xorw %ax, %ax                                   # Segment number zero
     movw %ax, %ds                                   # -> Data Segment
     movw %ax, %es                                   # -> Extra Segment
@@ -66,6 +66,8 @@ finish_probe:
     # and segment translation that makes virtual addresses
     # identical to physical addresses, so that the
     # effective memory map does not change during the switch.
+    # 从实模式切换到保护模式.
+    # 切换方式是设置 GDT 并
     lgdt gdtdesc
     movl %cr0, %eax
     orl $CR0_PE_ON, %eax
@@ -73,11 +75,12 @@ finish_probe:
 
     # Jump to next instruction, but in 32-bit code segment.
     # Switches processor into 32-bit mode.
+    # 跳转到下一个指令,但是是在 32 位模式下.
     ljmp $PROT_MODE_CSEG, $protcseg
 
 .code32                                             # Assemble for 32-bit mode
 protcseg:
-    # Set up the protected-mode data segment registers
+    # 设置保护模式数据段寄存器
     movw $PROT_MODE_DSEG, %ax                       # Our data segment selector
     movw %ax, %ds                                   # -> DS: Data Segment
     movw %ax, %es                                   # -> ES: Extra Segment
@@ -86,16 +89,17 @@ protcseg:
     movw %ax, %ss                                   # -> SS: Stack Segment
 
     # Set up the stack pointer and call into C. The stack region is from 0--start(0x7c00)
+    # 设置 sp(栈指针),调用 C 代码.
     movl $0x0, %ebp
     movl $start, %esp
     call bootmain
 
-    # If bootmain returns (it shouldn't), loop.
+    # bootmain 不应返回至此.
 spin:
     jmp spin
 
 .data
-# Bootstrap GDT
+# Bootstrap 阶段 GDT.
 .p2align 2                                          # force 4 byte alignment
 gdt:
     SEG_NULLASM                                     # null seg

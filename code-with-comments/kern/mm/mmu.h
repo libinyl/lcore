@@ -228,7 +228,7 @@ struct taskstate {
 
 #define PGSIZE          4096                    // bytes mapped by a page
 #define PGSHIFT         12                      // log2(PGSIZE)
-#define PTSIZE          (PGSIZE * NPTEENTRY)    // bytes mapped by a page directory entry
+#define PTSIZE          (PGSIZE * NPTEENTRY)    //每个一级页表映射的字节数 4096 * 1024
 #define PTSHIFT         22                      // log2(PTSIZE)
 
 #define PTXSHIFT        12                      // offset of PTX in a linear address

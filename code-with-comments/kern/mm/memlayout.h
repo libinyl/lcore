@@ -72,7 +72,8 @@
 
 /* 所有可管理的物理地址空间的映射: [0,KMEMSIZE)->[KERNBASE,KERNBASE+KMEMSIZE) */
 #define KERNBASE            0xC0000000                  // 内核运行态虚拟地址
-#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限
+//#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限
+#define KMEMSIZE            0x00400000                  // 最小 4M,即 1 个 page entry 映射的字节数
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
 /* *

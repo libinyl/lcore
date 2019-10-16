@@ -1,13 +1,17 @@
+# https://blog.csdn.net/u013484370/article/details/50638353
+
 OBJPREFIX	:= __objs_
 
 .SECONDEXPANSION:
 # -------------------- function begin --------------------
 
 # list all files in some directories: (#directories, #types)
+# 返回相应directories目录下所有 类型为types的文件
 listf = $(filter $(if $(2),$(addprefix %.,$(2)),%),\
 		  $(wildcard $(addsuffix $(SLASH)*,$(1))))
 
 # get .o obj files: (#files[, packet])
+# 给出以.o结尾的obj文件名列表files,和软件包名称packet，返回相应文件的目标文件名称
 toobj = $(addprefix $(OBJDIR)$(SLASH)$(if $(2),$(2)$(SLASH)),\
 		$(addsuffix .o,$(basename $(1))))
 

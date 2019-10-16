@@ -3,6 +3,8 @@
 #include <string.h>
 #include <default_pmm.h>
 
+#define DEFAULT_LOG_PMM 0
+
 /*  In the First Fit algorithm, the allocator keeps a list of free blocks
  * (known as the free list). Once receiving a allocation request for memory,
  * it scans along the list for the first block that is large enough to satisfy
@@ -132,13 +134,13 @@ default_alloc_pages(size_t n) {
     // TODO: optimize (next-fit)
     while ((le = list_next(le)) != &free_list) {
         struct Page *p = le2page(le, page_link);
-        if (p->property >= n) {
+        if (p->property >= n) {// first fit 找到了空闲字节数大于 n 的 page
             page = p;
             break;
         }
     }
     if (page != NULL) {
-        if (page->property > n) {
+        if (page->property > n) {   // first fit 调整
             struct Page *p = page + n;
             p->property = page->property - n;
             SetPageProperty(p);
@@ -147,6 +149,9 @@ default_alloc_pages(size_t n) {
         list_del(&(page->page_link));
         nr_free -= n;
         ClearPageProperty(page);
+    }
+    if(DEFAULT_LOG_PMM){
+        log("default_alloc_pages: 分配了一页内存\n");
     }
     return page;
 }

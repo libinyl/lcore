@@ -5,6 +5,11 @@
 
 int
 main(int argc, char *argv[]) {
+    fprintf(stdout,"\n----------boot sector 生成程序----------\n\n");    
+    fprintf(stdout,"源文件: %s, 目标磁盘文件: %s.\n,",argv[1],argv[2]);
+    fprintf(stdout,"原理: 复制源文件至缓冲区,校验大小,把第 511 和 512 个字节置为 0x55 和 0xAA 写入目标文件.\n");
+
+    
     struct stat st;
     if (argc != 3) {
         fprintf(stderr, "Usage: <input filename> <output filename>\n");
@@ -14,10 +19,12 @@ main(int argc, char *argv[]) {
         fprintf(stderr, "Error opening file '%s': %s\n", argv[1], strerror(errno));
         return -1;
     }
-    printf("'%s' size: %lld bytes\n", argv[1], (long long)st.st_size);
+    //printf("'%s' size: %lld bytes\n", argv[1], (long long)st.st_size);
     if (st.st_size > 510) {
         fprintf(stderr, "%lld >> 510!!\n", (long long)st.st_size);
         return -1;
+    }else{
+        fprintf(stdout, "文件大小校验: 可执行文件大小 = %lld < 510, 校验通过.\n",(long long)st.st_size);
     }
     char buf[512];
     memset(buf, 0, sizeof(buf));
@@ -37,7 +44,7 @@ main(int argc, char *argv[]) {
         return -1;
     }
     fclose(ofp);
-    printf("build 512 bytes boot sector: '%s' success!\n", argv[2]);
+    printf("\n----------512 字节 boot sector: '%s' 构建成功!----------b\n\n", argv[2]);
     return 0;
 }
 

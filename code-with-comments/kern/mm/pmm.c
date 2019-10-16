@@ -12,6 +12,8 @@
 #include <vmm.h>
 #include <kmalloc.h>
 
+#define LOG_PMM 0
+
 /* *
  * Task State Segment:
  *
@@ -129,9 +131,13 @@ load_esp0(uintptr_t esp0) {
     ts.ts_esp0 = esp0;
 }
 
-/* gdt_init - initialize the default GDT and TSS */
+/**
+ * 
+ * 初始化默认全局段描述表和 TSS 段
+ */ 
 static void
 gdt_init(void) {
+    logline("初始化开始: 全局段描述表");
     // set boot kernel stack and default SS0
     load_esp0((uintptr_t)bootstacktop);
     ts.ts_ss0 = KERNEL_DS;
@@ -144,6 +150,7 @@ gdt_init(void) {
 
     // load the TSS
     ltr(GD_TSS);
+    logline("初始化完毕: 全局段描述表");
 }
 
 //init_pmm_manager - 配置一个内存管理器实例
@@ -161,7 +168,7 @@ init_memmap(struct Page *base, size_t n) {
     pmm_manager->init_memmap(base, n);
 }
 
-//alloc_pages - call pmm->alloc_pages to allocate a continuous n*PAGESIZE memory 
+// 分配 n 个 page 的连续空间,封装缺页处理
 struct Page *
 alloc_pages(size_t n) {
     struct Page *page=NULL;
@@ -305,6 +312,11 @@ page_init(void) {
 //  perm: permission of this memory  
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
+    logline("开始: 区间映射.");
+    log("   一级页表地址:0x%08lx\n",pgdir);
+    log("   区间[0x%08lx,0x%08lx + %u) -> [0x%08lx, 0x%08lx + %u)\n",pa,pa,size,la,la,size);
+    log("   其中 size=%u M\n",size/1024/1024);
+
     assert(PGOFF(la) == PGOFF(pa));
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
@@ -314,6 +326,7 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
         assert(ptep != NULL);
         *ptep = pa | PTE_P | perm;
     }
+    logline("完毕: 区间映射.");
 }
 
 //boot_alloc_page - allocate one page using pmm->alloc_pages(1) 
@@ -333,6 +346,7 @@ boot_alloc_page(void) {
 void
 pmm_init(void) {
     logline("初始化开始:内存管理模块");
+    logline("目标:");
     // 之前已经开启了paging
     boot_cr3 = PADDR(boot_pgdir);
     log("内核页表基址: 0x%08lx\n",boot_cr3);
@@ -353,14 +367,14 @@ pmm_init(void) {
 
     check_pgdir();
 
-    static_assert(KERNBASE % PTSIZE == 0 && KERNTOP % PTSIZE == 0);
+    static_assert(KERNBASE % PTSIZE == 0);
+    static_assert( KERNTOP % PTSIZE == 0);
 
     // recursively insert boot_pgdir in itself
     // to form a virtual page table at virtual address VPT
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
-    // map all physical memory to linear memory with base linear addr KERNBASE
-    // linear_addr KERNBASE ~ KERNBASE + KMEMSIZE = phy_addr 0 ~ KMEMSIZE
+    // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
     // Since we are using bootloader's GDT,
@@ -369,9 +383,8 @@ pmm_init(void) {
     // then set kernel stack (ss:esp) in TSS, setup TSS in gdt, load TSS
     gdt_init();
 
-    //now the basic virtual memory map(see memalyout.h) is established.
-    //check the correctness of the basic virtual memory map.
-    check_boot_pgdir();
+    // 基本的虚拟地址空间分布已经建立.检查其正确性.
+    //check_boot_pgdir();
 
     print_pgdir();
     
@@ -386,6 +399,10 @@ pmm_init(void) {
 //  la:     the linear address need to map
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
+/**
+ * 对于给定的线性地址(liner addr),指定 page directory,返回对应的 pte.
+ * 
+ */ 
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     /* LAB2 EXERCISE 2: YOUR CODE
@@ -421,6 +438,9 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     }
     return NULL;          // (8) return page table entry
 #endif
+    if(LOG_PMM){
+        log("   对于指定的线性地址 la=0x%08lx,根据页目录pgdir=0x%08lx,返回其页表项pte.创建选项是%d.\n.",la, pgdir, create);
+    }
     pde_t *pdep = &pgdir[PDX(la)];
     if (!(*pdep & PTE_P)) {
         struct Page *page;
@@ -673,6 +693,8 @@ check_alloc_page(void) {
 
 static void
 check_pgdir(void) {
+    log("测试: page directory\n");
+    log("   - npage <= KMEMSIZE / PGSIZE\n");
     assert(npage <= KMEMSIZE / PGSIZE);
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
@@ -802,7 +824,7 @@ get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, siz
 //print_pgdir - print the PDT&PT
 void
 print_pgdir(void) {
-    cprintf("-------------------- BEGIN --------------------\n");
+    log("-------------------- 页表信息:begin --------------------\n");
     size_t left, right = 0, perm;
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
         cprintf("PDE(%03x) %08x-%08x %08x %s\n", right - left,
@@ -813,5 +835,5 @@ print_pgdir(void) {
                     l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
         }
     }
-    cprintf("--------------------- END ---------------------\n");
+    log("--------------------- 页表信息:end ---------------------\n");
 }

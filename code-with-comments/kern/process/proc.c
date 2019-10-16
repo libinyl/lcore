@@ -1215,7 +1215,7 @@ proc_init(void) {
 // idle: 闲散的内核进程,不断地检测"当前进程"是否被指定暂时放弃资源.
 void
 cpu_idle(void) {
-    cprintf("进入 cpu_idle 函数\n");
+    log("进入 cpu_idle 函数\n");
     while (1) {
         if (current->need_resched) {
             schedule();

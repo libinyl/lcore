@@ -346,17 +346,22 @@ struct mm_struct *check_mm_struct;
 // check_pgfault - pgfault handler 测试函数
 static void
 check_pgfault(void) {
-    log("测试 page fault.\n");
+    logline("开始测试: page fault");
+    log("原理: page fault");
+
     size_t nr_free_pages_store = nr_free_pages();
+    log("初始可用页数: %u.\n",nr_free_pages_store);
+    
 
     check_mm_struct = mm_create();
     assert(check_mm_struct != NULL);
 
     struct mm_struct *mm = check_mm_struct;
     pde_t *pgdir = mm->pgdir = boot_pgdir;
+    log("此mm_struct的一级页表地址是:x%08lx.\n",pgdir);
     assert(pgdir[0] == 0);
 
-    log("   创建一个页目录项对应大小的 vma(4096KB*1K), start=0, end=0x%08lx B= %d M, flag=write.\n",PTSIZE, PTSIZE/1024/1024);
+    log("   创建一个页目录项对应大小的 vma(4096KB*1K), start=0, end=0x%08lx B= %d M, flag=write,并插入到 mm 中.\n",PTSIZE, PTSIZE/1024/1024);
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
     assert(vma != NULL);
 
@@ -385,7 +390,9 @@ check_pgfault(void) {
 
     assert(nr_free_pages_store == nr_free_pages());
 
-    cprintf("check_pgfault() succeeded!\n");
+    //cprintf("check_pgfault() succeeded!\n");
+    logline("测试通过: page fault");
+
 }
 //page fault number
 volatile unsigned int pgfault_num=0;
@@ -415,9 +422,15 @@ volatile unsigned int pgfault_num=0;
  */
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
+    log("do_pgfault:  分析并处理缺页.");
+    log("cpu 已将触发异常的地址置于 cr2 寄存器,值为: x%08lx.\n",addr);
+    log("此异常错误码: %d\n",error_code);
+
     int ret = -E_INVAL;
     // 找到此地址所在的 vma
+    
     struct vma_struct *vma = find_vma(mm, addr);
+    log("已通过find_vma获取此地址在 mm_struct 中对应的 vma.\n");
 
     pgfault_num++;
     // 若未找到 vma,或找到的 vma 的起始地址不正常(大于 addr),则不合法
@@ -527,10 +540,12 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
    }
 #endif
     // 1. 加载地址 addr对应的的页表项,不存在则创建
+    log("开始恢复缺页异常\n");
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
         cprintf("get_pte in do_pgfault failed\n");
         goto failed;
     }
+    log("已得到此地址的页表项\n");
     if (*ptep == 0) { // 1. 若页表项中物理地址的值为空,则分配一个物理页并将 addr 映射过去
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");

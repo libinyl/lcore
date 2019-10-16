@@ -1,3 +1,8 @@
+/**
+ * 磁盘文件系统生成程序.
+ * 
+ */ 
+
 /* prefer to compile mksfs on 64-bit linux systems.
 
 Use a compiler-specific macro.
@@ -624,6 +629,9 @@ static_check(void) {
 
 int
 main(int argc, char **argv) {
+    fprintf(stdout, "\n\n----------文件系统生成程序----------\n");
+    fprintf(stdout, "参数: %s, %s\n", argv[1],argv[2]);
+    
     static_check();
     if (argc != 3) {
         bug("usage: <input *.img> <input dirname>\n");
@@ -632,7 +640,7 @@ main(int argc, char **argv) {
     if (create_img(open_img(imgname), home) != 0) {
         bug("create img failed.\n");
     }
-    printf("create %s (%s) successfully.\n", imgname, home);
+    printf("\n----------%s (%s) 成功.----------\n\n", imgname, home);
     return 0;
 }
 

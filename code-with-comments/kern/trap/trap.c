@@ -160,12 +160,14 @@ print_regs(struct pushregs *regs) {
 
 static inline void
 print_pgfault(struct trapframe *tf) {
+    log("缺页异常信息:\n");
+
     /* error_code:
      * bit 0 == 0 means no page found, 1 means protection fault
      * bit 1 == 0 means read, 1 means write
      * bit 2 == 0 means kernel, 1 means user
      * */
-    cprintf("page fault at 0x%08x: %c/%c [%s].\n", rcr2(),
+    cprintf("   page fault at 0x%08x,解析错误码,得到触发原因: %c/%c [%s].\n", rcr2(),
             (tf->tf_err & 4) ? 'U' : 'K',
             (tf->tf_err & 2) ? 'W' : 'R',
             (tf->tf_err & 1) ? "protection fault" : "no page found");
@@ -179,6 +181,9 @@ print_pgfault(struct trapframe *tf) {
  */ 
 static int
 pgfault_handler(struct trapframe *tf) {
+    log("pgfault_handler: 开始处理缺页;\n");
+    log("处理逻辑: ")
+    log("   1) ")
     extern struct mm_struct *check_mm_struct;
     if(check_mm_struct !=NULL) { //used for test check_swap
             print_pgfault(tf);
@@ -196,6 +201,7 @@ pgfault_handler(struct trapframe *tf) {
         }
         mm = current->mm;
     }
+    log("已获取触发缺页的 mm_struct\n");
     return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
@@ -204,12 +210,14 @@ extern struct mm_struct *check_mm_struct;
 
 static void
 trap_dispatch(struct trapframe *tf) {
+    log("开始分发中断.中断号:\n",tf->tf_trapno);
     char c;
 
     int ret=0;
 
     switch (tf->tf_trapno) {
     case T_PGFLT:  //page fault
+        log("内核检测到缺页异常中断.\n");
         if ((ret = pgfault_handler(tf)) != 0) {
             print_trapframe(tf);
             if (current == NULL) {
@@ -291,8 +299,8 @@ trap_dispatch(struct trapframe *tf) {
  */ 
 void
 trap(struct trapframe *tf) {
-    // dispatch based on what type of trap occurred
-    // used for previous projects
+    log("陷阱预处理,维护中断嵌套\n");
+    // 基于陷阱的类型,分发 trapframe
     if (current == NULL) {
         trap_dispatch(tf);
     }
