@@ -34,7 +34,8 @@
         "ostream": "cpp",
         "syscall.h": "c",
         "ios": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "elf.h": "c"
     },
     "workbench.colorCustomizations": {
         "activityBar.background": "#ef7853",

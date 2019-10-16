@@ -182,8 +182,7 @@ print_pgfault(struct trapframe *tf) {
 static int
 pgfault_handler(struct trapframe *tf) {
     log("pgfault_handler: 开始处理缺页;\n");
-    log("处理逻辑: ")
-    log("   1) ")
+
     extern struct mm_struct *check_mm_struct;
     if(check_mm_struct !=NULL) { //used for test check_swap
             print_pgfault(tf);

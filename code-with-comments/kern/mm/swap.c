@@ -82,6 +82,8 @@ volatile unsigned int swap_out_num=0;
 int
 swap_out(struct mm_struct *mm, int n, int in_tick)
 {
+     log("页换出处理\n.");
+     log("");
      int i;
      for (i = 0; i != n; ++ i)
      {

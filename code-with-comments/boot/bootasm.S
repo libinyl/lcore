@@ -2,8 +2,11 @@
 
 # CPU 启动: 跳转到 32 位保护模式,调用 C 代码.
 # BIOS 从硬盘上的第一块扇区把此代码加载到物理内存 0x7c00 处,并在实模式下运行,初始 cs=0,ip=7c00.
+# 此时使用分段式寻址方式,但初始状态是重置状态,全局描述符表区域被默认设置为,基址=0,limit=0FFFFH, 似乎是把整个内存空间都视作GDT,其本质上没有分段.
+# 但我们要开启分段,否则无法执行 boot loader 和 kernel 的高地址代码.
 
-# 参考 https://www.cnblogs.com/maruixin/p/3175894.html
+# 具体指令作用可参考 https://www.cnblogs.com/maruixin/p/3175894.html
+# 如何调试? b *0x7c00
 
 .set PROT_MODE_CSEG,        0x8                     # 内核代码段选择子 kernel code segment selector
 .set PROT_MODE_DSEG,        0x10                    # 内核数据段选择子 kernel data segment selector
@@ -67,7 +70,6 @@ finish_probe:
     # identical to physical addresses, so that the
     # effective memory map does not change during the switch.
     # 从实模式切换到保护模式.
-    # 切换方式是设置 GDT 并
     lgdt gdtdesc
     movl %cr0, %eax
     orl $CR0_PE_ON, %eax
@@ -81,7 +83,10 @@ finish_probe:
 .code32                                             # Assemble for 32-bit mode
 protcseg:
     # 设置保护模式数据段寄存器
-    movw $PROT_MODE_DSEG, %ax                       # Our data segment selector
+    # 每个数据段选择子设置为0x10.
+    # 段选择子的格式是,高 12 位是 index.参考 x86 手册图 3-6.
+    # 而所有数据段都位于 GDT 的第 2 项,所以把高 12 位设置为 2.
+    movw $PROT_MODE_DSEG, %ax                       
     movw %ax, %ds                                   # -> DS: Data Segment
     movw %ax, %es                                   # -> ES: Extra Segment
     movw %ax, %fs                                   # -> FS
@@ -89,22 +94,28 @@ protcseg:
     movw %ax, %ss                                   # -> SS: Stack Segment
 
     # Set up the stack pointer and call into C. The stack region is from 0--start(0x7c00)
-    # 设置 sp(栈指针),调用 C 代码.
+    # 设置 sp(栈指针)为调用 C 代码.
+    # 栈基址 = 0
+    # 栈指针 = start. 为何栈基址设置为 0?事实上,只要一跳转到bootmain,栈基址指针会被立刻更新为sp.所以现在设置成什么无所谓.
     movl $0x0, %ebp
     movl $start, %esp
+    # ok, 32位保护模式环境已经构建完毕(寄存器,GDT,保护模式位)
     call bootmain
 
     # bootmain 不应返回至此.
 spin:
     jmp spin
 
+# 截至加载 GDT 之前,整个物理内存的分段情况是base=0,limit=0FFFFH,即一大块,相当于没有分段.
+# 但是 bootloader和 kernel 的代码段都是高位, 如果不更新 GDT的话无法访问.
+
 .data
-# Bootstrap 阶段 GDT.
+# Bootstrap 阶段 GDT,维护了 段选择子索引+段区间.寻址时,段寄存器拿着索引来找段区间,再加上偏移地址定位.
 .p2align 2                                          # force 4 byte alignment
 gdt:
-    SEG_NULLASM                                     # null seg
-    SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # code seg for bootloader and kernel
-    SEG_ASM(STA_W, 0x0, 0xffffffff)                 # data seg for bootloader and kernel
+    SEG_NULLASM                                     # 第 0 项, null seg
+    SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # 第 1 项, bootloader 和 kernel 的代码段, type = exec,read,  base = 0 ,limit = 0xffffffff = 4GB
+    SEG_ASM(STA_W, 0x0, 0xffffffff)                 # 第 2 项, bootloader 和 kernel 的数据段, type = write,      base = 0 ,limit = 0xffffffff = 4GB
 
 gdtdesc:
     .word 0x17                                      # sizeof(gdt) - 1

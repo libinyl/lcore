@@ -63,6 +63,12 @@ const struct pmm_manager *pmm_manager;
  * always available at virtual address PGADDR(PDX(VPT), PDX(VPT), 0), to which
  * vpd is set bellow.
  * */
+
+/**
+ * 自映射: 虚拟地址范围 [VPT, VPT + PTSIZE) 对应的一级页表指向它自己.也就是这块内存既是一级页表
+ * 也是二级页表.
+ * 好处: 所有的
+ */ 
 pte_t * const vpt = (pte_t *)VPT;
 pde_t * const vpd = (pde_t *)PGADDR(PDX(VPT), PDX(VPT), 0);
 
@@ -301,7 +307,6 @@ page_init(void) {
         }
     }
     logline("初始化完毕:分页式虚拟地址空间管理");
-
 }
 
 //boot_map_segment - setup&enable the paging mechanism
@@ -314,7 +319,7 @@ static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
     logline("开始: 区间映射.");
     log("   一级页表地址:0x%08lx\n",pgdir);
-    log("   区间[0x%08lx,0x%08lx + %u) -> [0x%08lx, 0x%08lx + %u)\n",pa,pa,size,la,la,size);
+    log("   区间[0x%08lx,0x%08lx + 0x%08lx ) -> [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
     log("   其中 size=%u M\n",size/1024/1024);
 
     assert(PGOFF(la) == PGOFF(pa));
@@ -346,10 +351,14 @@ boot_alloc_page(void) {
 void
 pmm_init(void) {
     logline("初始化开始:内存管理模块");
-    logline("目标:");
+    log("初始页表信息:\n");
+
+    //print_pgdir();
+
     // 之前已经开启了paging
     boot_cr3 = PADDR(boot_pgdir);
-    log("内核页表基址: 0x%08lx\n",boot_cr3);
+    log("内核页表物理基址: 0x%08lx\n",boot_cr3);
+
 
     //We need to alloc/free the physical memory (granularity is 4KB or other size). 
     //So a framework of physical memory manager (struct pmm_manager)is defined in pmm.h
@@ -694,7 +703,6 @@ check_alloc_page(void) {
 static void
 check_pgdir(void) {
     log("测试: page directory\n");
-    log("   - npage <= KMEMSIZE / PGSIZE\n");
     assert(npage <= KMEMSIZE / PGSIZE);
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
@@ -824,7 +832,7 @@ get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, siz
 //print_pgdir - print the PDT&PT
 void
 print_pgdir(void) {
-    log("-------------------- 页表信息:begin --------------------\n");
+    log("-------------------- 当前页表信息:begin --------------------\n");
     size_t left, right = 0, perm;
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
         cprintf("PDE(%03x) %08x-%08x %08x %s\n", right - left,
@@ -835,5 +843,5 @@ print_pgdir(void) {
                     l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
         }
     }
-    log("--------------------- 页表信息:end ---------------------\n");
+    log("--------------------- 当前页表信息:end ---------------------\n");
 }

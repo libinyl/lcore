@@ -82,6 +82,10 @@
  * table, which maps all the PTEs (Page Table Entry) containing the page mappings
  * for the entire virtual address space into that 4 Meg region starting at VPT.
  * */
+/**
+ * 虚拟页表. 一级页表内的项包含一个指向它自己的指针.
+ * 0xFAC00000 = 1111 1010 1100 0000 0000 0000 0000 0000
+ */ 
 #define VPT                 0xFAC00000
 
 #define KSTACKPAGE          2                           // # of pages in kernel stack
