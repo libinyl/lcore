@@ -43,9 +43,10 @@
  *                            |        Invalid Memory (*)       | --/--
  *     KERNTOP -------------> +---------------------------------+ 0xF8000000
  *                            |                                 |
- *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE = 896MB
- *                            |                                 |
- *     KERNBASE ------------> +---------------------------------+ 0xC0000000
+ *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE = 896MB, ucore 最大支持的物理地址
+ *                            |                                 |               <=  maxpa = min{maxpa, KMEMSIZE}
+ *                            |                                 |               <= .end, 0xC015D324 实际内核文件加载到内存中的虚边界
+ *     KERNBASE ------------> +---------------------------------+ 0xC0000000    <= .text 起始,
  *                            |        Invalid Memory (*)       | --/--
  *     USERTOP -------------> +---------------------------------+ 0xB0000000
  *                            |           User stack            |
@@ -72,7 +73,7 @@
 
 /* 所有可管理的物理地址空间的映射: [0,KMEMSIZE)->[KERNBASE,KERNBASE+KMEMSIZE) */
 #define KERNBASE            0xC0000000                  // 内核运行态虚拟地址 = 3072M
-#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限 = 896MB
+#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限 = 896MB,可调整至最小4M,即一个一级页表管理的容量
 //#define KMEMSIZE            0x00400000                  // 最小 4M,即 1 个 page entry 映射的字节数
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
@@ -84,8 +85,9 @@
  * */
 /**
  * 虚拟页表. 一级页表内的项包含一个指向它自己的指针.
+ * 这样
  * 0xFAC00000 = 1111 1010 1100 0000 0000 0000 0000 0000
- *                          |              |          |
+ *    
  */ 
 #define VPT                 0xFAC00000
 

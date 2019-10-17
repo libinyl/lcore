@@ -260,7 +260,7 @@ page_init(void) {
             log("系不可用内存.\n");
         }
     }
-    if (maxpa > KMEMSIZE) { //可管理物理空间上限不超过 KMEMSIZE=0x38000000
+    if (maxpa > KMEMSIZE) { // 可管理物理空间上限不超过 KMEMSIZE=0x38000000
         maxpa = KMEMSIZE;   
     }
 
@@ -377,6 +377,7 @@ pmm_init(void) {
     // recursively insert boot_pgdir in itself
     // to form a virtual page table at virtual address VPT
     // 把一级页表的第PDX(VPT)项设置为boot_pgdir本身的物理地址,即自映射
+    // 用途: 
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);

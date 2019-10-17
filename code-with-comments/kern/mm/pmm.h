@@ -49,14 +49,8 @@ int copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end, bool shar
 
 void print_pgdir(void);
 
-/* *
- * PADDR - takes a kernel virtual address (an address that points above KERNBASE),
- * where the machine's maximum 256MB of physical memory is mapped and returns the
- * corresponding physical address.  It panics if you pass it a non-kernel virtual address.
- * */
-
 /**
- * kernel virtual address => 物理地址
+ * 转换: kernel virtual address => 物理地址
  */ 
 #define PADDR(kva) ({                                                   \
             uintptr_t __m_kva = (uintptr_t)(kva);                       \

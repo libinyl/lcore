@@ -272,7 +272,7 @@ print_kerninfo(void) {
     log("   etext\t\t0x%08x ≈ %d M\n", etext, (unsigned int)etext/1024/1024);
     log("   edata\t\t0x%08x ≈ %d M\n", edata, (unsigned int)edata/1024/1024);
     log("   end(.bss 结束))\t0x%08x ≈ %d M\n\n", end, (unsigned int)end/1024/1024);
-    log("   内核预计文件占用最大内存:\t4MB\n");
+    log("   内核文件预计占用最大内存:\t4MB\n");
     log("   内核文件实际占用内存:\t%d KB\n", (end - kern_init + 1023)/1024);
     log("   内核可管理物理内存大小上限:\t0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
     log("   内核虚拟地址区间(B):\t\t[0x%08lx , 0x%08lx)\n",KERNBASE, KERNBASE + KMEMSIZE);
