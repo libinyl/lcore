@@ -154,11 +154,10 @@ gdt_init(void) {
     /**
      * 初始化 gdt 中的 TSS 字段:
      * gdt[索引] = type | base | limit | dpl
-     * 
      */ 
     gdt[SEG_TSS] = SEGTSS(STS_T32A, (uintptr_t)&ts, sizeof(ts), DPL_KERNEL);
 
-    // reload all segment registers
+    // 更新所有段寄存器(的段选择子)的值
     lgdt(&gdt_pd);
 
     //  加载 TSS 段选择子到 TR 寄存器
@@ -374,9 +373,7 @@ pmm_init(void) {
     log("目标: 根据实际内存情况,建立起虚拟内存机制.\n");
     log("      kern_entry 最后仅配置了内核区域的虚拟地址映射,现在要建立完整的映射.\n");
 
-    //print_pgdir();
-
-    // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量,用于内核一级页表基址.
+    // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量boot_cr3 即内核一级页表基址.
     boot_cr3 = PADDR(boot_pgdir);
     log("内核页表物理基址: 0x%08lx\n",boot_cr3);
 
@@ -391,6 +388,7 @@ pmm_init(void) {
 
     check_pgdir();
 
+    // 编译时校验: KERNBASE和KERNTOP都是PTSIZE的整数,即可以用两级页表管理(4M 的倍数)
     static_assert(KERNBASE % PTSIZE == 0);
     static_assert( KERNTOP % PTSIZE == 0);
 
@@ -400,14 +398,13 @@ pmm_init(void) {
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
-    log("   开始建立区间映射,即 [KERNBASE, KERNBASE+KERNBASE)=>[0, KMEMSIZE).\n");
+    log("   开始建立区间映射,即 [KERNBASE, KERNBASE+KERNBASE) => [0, KMEMSIZE).\n");
     // 在此过程中会建立二级页表.
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
-    // Since we are using bootloader's GDT,
-    // we should reload gdt (second time, the last time) to get user segments and the TSS
-    // map virtual_addr 0 ~ 4G = linear_addr 0 ~ 4G
-    // then set kernel stack (ss:esp) in TSS, setup TSS in gdt, load TSS
+    // 到目前为止还是用的 bootloader 的GDT.
+    // 现在更新为内核的 GDT,把内存平铺, virtual_addr 0 ~ 4G = linear_addr 0 ~ 4G.
+    // 然后设置内存中的TSS即 ts, ss:esp, 设置 gdt 中的 TSS指向&ts, 最后设置 TR 寄存器的值为 gdt 中 TSS 项索引.
     gdt_init();
 
     // 基本的虚拟地址空间分布已经建立.检查其正确性.
@@ -711,7 +708,7 @@ check_alloc_page(void) {
 
 static void
 check_pgdir(void) {
-    log("测试: page director相关函数y\n");
+    log("测试: page directory 相关函数y\n");
     assert(npage <= KMEMSIZE / PGSIZE);
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
