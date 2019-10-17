@@ -38,15 +38,15 @@
  *                            |         Empty Memory (*)        |
  *                            |                                 |
  *                            +---------------------------------+ 0xFB000000
- *                            |   Cur. Page Table (Kern, RW)    | RW/-- PTSIZE  
- *     VPT -----------------> +---------------------------------+ 0xFAC00000    内核页表起始虚地址
+ *                            |   Cur. Page Table (Kern, RW)    | RW/-- PTSIZE  = 4M, 一个一级页表项映射的大小
+ *     VPT -----------------> +---------------------------------+ 0xFAC00000    内核(新)二级页表起始虚地址
  *                            |        Invalid Memory (*)       | --/--
- *     KERNTOP -------------> +---------------------------------+ 0xF8000000
+ *     KERNTOP -------------> +---------------------------------+ 0xF8000000    = 3968M
  *                            |                                 |
- *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE = 896MB, ucore 最大支持的物理地址
- *                            |                                 |               <=  maxpa = min{maxpa, KMEMSIZE}
+ *                            |    Remapped Physical Memory     | RW/-- KMEMSIZE = 896MB, ucore 最大支持的物理内存大小
+ *                            |                                 |               <=  maxpa = min{maxpa, KMEMSIZE},实际管理的物理内存大小
  *                            |                                 |               <= .end, 0xC015D324 实际内核文件加载到内存中的虚边界
- *     KERNBASE ------------> +---------------------------------+ 0xC0000000    <= .text 起始,
+ *     KERNBASE ------------> +---------------------------------+ 0xC0000000    <= .text 起始 = 3072M
  *                            |        Invalid Memory (*)       | --/--
  *     USERTOP -------------> +---------------------------------+ 0xB0000000
  *                            |           User stack            |
@@ -77,18 +77,6 @@
 //#define KMEMSIZE            0x00400000                  // 最小 4M,即 1 个 page entry 映射的字节数
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
-/* *
- * Virtual page table. Entry PDX[VPT] in the PD (Page Directory) contains
- * a pointer to the page directory itself, thereby turning the PD into a page
- * table, which maps all the PTEs (Page Table Entry) containing the page mappings
- * for the entire virtual address space into that 4 Meg region starting at VPT.
- * */
-/**
- * 虚拟页表. 一级页表内的项包含一个指向它自己的指针.
- * 这样
- * 0xFAC00000 = 1111 1010 1100 0000 0000 0000 0000 0000
- *    
- */ 
 #define VPT                 0xFAC00000
 
 #define KSTACKPAGE          2                           // # of pages in kernel stack
@@ -188,4 +176,5 @@ typedef struct {
 #endif /* !__ASSEMBLER__ */
 
 #endif /* !__KERN_MM_MEMLAYOUT_H__ */
+
 

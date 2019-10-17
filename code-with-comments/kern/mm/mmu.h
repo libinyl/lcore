@@ -216,19 +216,20 @@ struct taskstate {
 #define PGOFF(la) (((uintptr_t)(la)) & 0xFFF)
 
 // construct linear address from indexes and offset
+// 用高 10 位中 10 位低 12 位三部分构建出线性地址
 #define PGADDR(d, t, o) ((uintptr_t)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
 
-// address in page table or page directory entry
+// 取出页表项中的包含的地址部分.即取低高 20 位.注意取出的结果是物理地址.
 #define PTE_ADDR(pte)   ((uintptr_t)(pte) & ~0xFFF)
 #define PDE_ADDR(pde)   PTE_ADDR(pde)
 
 /* page directory and page table constants */
-#define NPDEENTRY       1024                    // page directory entries per page directory
-#define NPTEENTRY       1024                    // page table entries per page table
+#define NPDEENTRY       1024                    // 每个一级页表包含的项数,即一个一级页表维护 1024 * 4M = 4G
+#define NPTEENTRY       1024                    // 每个二级页表包含的项数,即每个一级页表项维护的二级页表维护 1024*4K=4M
 
 #define PGSIZE          4096                    // bytes mapped by a page
 #define PGSHIFT         12                      // log2(PGSIZE)
-#define PTSIZE          (PGSIZE * NPTEENTRY)    //每个一级页表映射的字节数 4096 * 1024 Byte = 4MB
+#define PTSIZE          (PGSIZE * NPTEENTRY)    // 每个一级页表映射的字节数 4096 * 1024 Byte = 4MB
 #define PTSHIFT         22                      // log2(PTSIZE)
 
 #define PTXSHIFT        12                      // offset of PTX in a linear address

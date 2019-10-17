@@ -338,8 +338,8 @@ setup_pgdir(struct mm_struct *mm) {
         return -E_NO_MEM;
     }
     pde_t *pgdir = page2kva(page);
-    memcpy(pgdir, boot_pgdir, PGSIZE);
-    pgdir[PDX(VPT)] = PADDR(pgdir) | PTE_P | PTE_W;
+    memcpy(pgdir, boot_pgdir, PGSIZE);  // 直接复制内核一级页表
+    pgdir[PDX(VPT)] = PADDR(pgdir) | PTE_P | PTE_W; // 自映射
     mm->pgdir = pgdir;
     return 0;
 }

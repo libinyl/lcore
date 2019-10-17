@@ -71,12 +71,14 @@ bootstacktop:
 # 我们只需要映射两块,把对虚拟内存 [0,4M)和[KERNBASE, KERNBASE+4M)都映射到物理内存[0,4M)上.
 # 所以只需 2 个一级页表项.
 # 第一个页表项的上限是KERNBASE,共占用 768 个 entry,共 3072Byte<PAGESIZE,加上第二个页表项,再加上对齐,也没超过1 个 PAGESIZE.
+# 而一个 PAGESIZE 可以容纳 4K/4=1K 个 entry. KERNBASE 大概在其中 3/4 的位置,还可以容纳 1K - 768 = 256 个 entry,即 1G 的容量.
 
 # 实际 nm 输出
 # c0158000 d __boot_pt1
 # c0157c00 d __second_PDE
 # c0157000 D __boot_pgdir
-# 一级页表共占用 0x1000Byte=4KB
+# 也可以得到验证, 一级页表共占用 0x1000Byte=4KB
+
 
 .section .data.pgdir
 .align PGSIZE

@@ -15,24 +15,26 @@
 #define LOG_PMM 0
 
 /* *
- * Task State Segment:
+ * 任务状态段: (Task State Segment)
+ * 
+ * 作用: 权限等级发生变化时,cpu 从TSS 段中加载内核栈基址和栈指针,以执行内核代码.
+ * 
+ * TSS 可以位于内存的任何位置.寄存器TR(Task Register) 的值作为段选择子,指向 GDT 中的 TSS描述符 的索引. 
+ * 而 GDT 中的这一项中的一个字段指向内存中的 TSS.
+ * 在 gdt_init 中对其进行初始化.
+ *  - 在 GDT 中创建一个 TSS 描述符
+ *  - 初始化内存中的 TSS
+ *  - 设置 TR 寄存器的值(即段选择子)为GDT 中 TSS 描述符的索引.
  *
- * The TSS may reside anywhere in memory. A special segment register called
- * the Task Register (TR) holds a segment selector that points a valid TSS
- * segment descriptor which resides in the GDT. Therefore, to use a TSS
- * the following must be done in function gdt_init:
- *   - create a TSS descriptor entry in GDT
- *   - add enough information to the TSS in memory as needed
- *   - load the TR register with a segment selector for that segment
+ * 当权限等级发生变化时,TSS 中用于指向新的 stack pointer 的字段会发生变化.
+ * 在 ucore 中只用到其中的 SS0 和 ESP0.
+ * 
+ * CPL=0 时,
+ *      - 栈段选择子(stack segment selector)的值由SS0维护;
+ *      - ESP的值由 ESP0 维护.
  *
- * There are several fileds in TSS for specifying the new stack pointer when a
- * privilege level change happens. But only the fields SS0 and ESP0 are useful
- * in our os kernel.
- *
- * The field SS0 contains the stack segment selector for CPL = 0, and the ESP0
- * contains the new ESP value for CPL = 0. When an interrupt happens in protected
- * mode, the x86 CPU will look in the TSS for SS0 and ESP0 and load their value
- * into SS and ESP respectively.
+ * 当在保护模式发生中断时,x86cpu 会在 TSS 段中寻找 SS0 和 ESP0 值,并分别加载到 SS 和 ESP 寄存器.
+ * 
  * */
 static struct taskstate ts = {0};
 
@@ -63,20 +65,13 @@ const struct pmm_manager *pmm_manager;
  * always available at virtual address PGADDR(PDX(VPT), PDX(VPT), 0), to which
  * vpd is set bellow.
  * */
-
-/**
- * 自映射: 虚拟地址范围 [VPT, VPT + PTSIZE) 对应的一级页表指向它自己.也就是这块内存既是一级页表
- * 也是二级页表.
- * 好处: 所有的
- */ 
 pte_t * const vpt = (pte_t *)VPT;
 pde_t * const vpd = (pde_t *)PGADDR(PDX(VPT), PDX(VPT), 0);
 
 /* *
  * Global Descriptor Table:
  *
- * The kernel and user segments are identical (except for the DPL). To load
- * the %ss register, the CPL must equal the DPL. Thus, we must duplicate the
+ * To load the %ss register, the CPL must equal the DPL. Thus, we must duplicate the
  * segments for the user and the kernel. Defined as follows:
  *   - 0x0 :  unused (always faults -- for trapping NULL far pointers)
  *   - 0x8 :  kernel code segment
@@ -85,15 +80,23 @@ pde_t * const vpd = (pde_t *)PGADDR(PDX(VPT), PDX(VPT), 0);
  *   - 0x20:  user data segment
  *   - 0x28:  defined for tss, initialized in gdt_init
  * 
- * 全局段描述符表
+ * 全局段描述符表(GDT)定义: 参考 Intel 手册 Figure 3-8, 3-10
+ *  内核和用户的段描述符表是相同的,除了 DPL.
+ * 
+ * gdt起到保护作用.段寄存器(cs,ds))中维护着段选择子(和其他隐藏值),想要访问某个段,首先要通过 GDT 的权限验证,
+ * 然后再通过其他偏移寄存器,基于 GDT 中的基址,找到最终的地址.
+ * 
+ * ucore 使用分页式的内存管理,GDT 把全部内存平铺,只起到权限限制作用.
+ * 
  * */
 static struct segdesc gdt[] = {
+    // gdt[索引] = type | base | limit | dpl
     SEG_NULL,
     [SEG_KTEXT] = SEG(STA_X | STA_R, 0x0, 0xFFFFFFFF, DPL_KERNEL),
     [SEG_KDATA] = SEG(STA_W, 0x0, 0xFFFFFFFF, DPL_KERNEL),
     [SEG_UTEXT] = SEG(STA_X | STA_R, 0x0, 0xFFFFFFFF, DPL_USER),
     [SEG_UDATA] = SEG(STA_W, 0x0, 0xFFFFFFFF, DPL_USER),
-    [SEG_TSS]   = SEG_NULL,
+    [SEG_TSS]   = SEG_NULL, //在 gdt_init 中初始化
 };
 
 static struct pseudodesc gdt_pd = {
@@ -143,20 +146,24 @@ load_esp0(uintptr_t esp0) {
  */ 
 static void
 gdt_init(void) {
-    logline("初始化开始: 全局段描述表");
-    // set boot kernel stack and default SS0
-    load_esp0((uintptr_t)bootstacktop);
-    ts.ts_ss0 = KERNEL_DS;
+    logline("初始化开始: 全局段描述表&TSS");
+    // 设置内核栈基址和默认的 SS0
+    load_esp0((uintptr_t)bootstacktop); // 设置TSS内核栈指针为bootstacktop
+    ts.ts_ss0 = KERNEL_DS;              // 设置TSS内核栈段选择子(即内核栈基址),默认指向 GDT 中的 SEG_KDATA一项
 
-    // initialize the TSS filed of the gdt
+    /**
+     * 初始化 gdt 中的 TSS 字段:
+     * gdt[索引] = type | base | limit | dpl
+     * 
+     */ 
     gdt[SEG_TSS] = SEGTSS(STS_T32A, (uintptr_t)&ts, sizeof(ts), DPL_KERNEL);
 
     // reload all segment registers
     lgdt(&gdt_pd);
 
-    // load the TSS
+    //  加载 TSS 段选择子到 TR 寄存器
     ltr(GD_TSS);
-    logline("初始化完毕: 全局段描述表");
+    logline("初始化完毕: 全局段描述表&TSS");
 }
 
 //init_pmm_manager - 配置一个内存管理器实例
@@ -315,23 +322,36 @@ page_init(void) {
 //  size: memory size
 //  pa:   physical address of this memory
 //  perm: permission of this memory  
+/**
+ * 对区域进行映射,专用于内核.
+ *      把虚拟地址[la, la + size)映射至物理地址[pa, pa + size),映射关系保存在 pgdir 指向的一级页表上.
+ *      la 和 pa 将向下对 PGSIZE 取整.
+ * 映射过程: 
+ *      对于给定的虚拟地址,每隔一个 PGSIZE值,就根据指定的一级页表地址pgdir,找到对应的二级页表项,写入相应的的物理地址和属性.
+ * 
+ * 计算: 对于内核初始值 KMEMSIZE=896MB,需要多少个/多大空间的二级页表来保存映射关系?
+ *      1) 对于一级页表, 参考 entry.S, 一个 PAGESIZE 大小的一级页表,在 KERNELBASE之上还可以维护 1G 的内存>896MB,所以仍然使用已经定义的一级页表__boot_pgdir即可.
+ *      2) 对于二级页表, 则需要896M/4K=224K个 entry,每个二级页表含 1K个 entry,所以共需要 224 个二级页表.
+ *      3) ucore 中比较方便地设定为每个页表的大小是 1024 个,正好占用一个 page.所以需要224*4K=896KB 的空间容纳这些页表.
+ */ 
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
-    logline("开始: 区间映射.");
+    logline("开始: 内核区域映射.");
     log("   一级页表地址:0x%08lx\n",pgdir);
     log("   区间[0x%08lx,0x%08lx + 0x%08lx ) -> [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
     log("   其中 size=%u M\n",size/1024/1024);
 
-    assert(PGOFF(la) == PGOFF(pa));
+    assert(PGOFF(la) == PGOFF(pa));// 要映射的地址在 page 内的偏移量应当相同
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
+    log("   调整过的值: n: 0x%08lx, la: 0x%08lx, pa: 0x%08lx.\n", n, la, pa);
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
-        *ptep = pa | PTE_P | perm;
+        *ptep = pa | PTE_P | perm;  // 取出后要保证权限的正确性.
     }
-    logline("完毕: 区间映射.");
+    logline("完毕: 内核区域映射.");
 }
 
 //boot_alloc_page - allocate one page using pmm->alloc_pages(1) 
@@ -374,13 +394,14 @@ pmm_init(void) {
     static_assert(KERNBASE % PTSIZE == 0);
     static_assert( KERNTOP % PTSIZE == 0);
 
-    // recursively insert boot_pgdir in itself
-    // to form a virtual page table at virtual address VPT
-    // 把一级页表的第PDX(VPT)项设置为boot_pgdir本身的物理地址,即自映射
-    // 用途: 
+    // 定义一块映射,使得可以更方便地访问一级页表的内容.在 print_pgdir 中用到.
+    // 定义一个高于 KERNBASE + KMEMSIZE 的地址 VPT, 设置[VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB )的映射.
+    // 这样一来, 只要访问到 VPT 起始的 4MB 的虚拟地址范围内,都会映射到 boot_pgdir 对应的起始的 4MB ,即一级页表本身! 太稳了.
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
+    log("   开始建立区间映射,即 [KERNBASE, KERNBASE+KERNBASE)=>[0, KMEMSIZE).\n");
+    // 在此过程中会建立二级页表.
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
     // Since we are using bootloader's GDT,
@@ -390,7 +411,7 @@ pmm_init(void) {
     gdt_init();
 
     // 基本的虚拟地址空间分布已经建立.检查其正确性.
-    //check_boot_pgdir();
+    check_boot_pgdir();
 
     print_pgdir();
     
@@ -408,6 +429,8 @@ pmm_init(void) {
 /**
  * 对于给定的线性地址(liner addr),指定 page directory,返回对应的 pte.
  * 
+ * 注意:只负责找到,不负责内容的读写!
+ * 
  */ 
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
@@ -418,25 +441,18 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
      *   PTE_U           0x004                   // page table/directory entry flags bit : User can access
      */
 #if 0
-    pde_t *pdep = NULL;   // (1) find page directory entry
-    if (0) {              // (2) check if entry is not present
-                          // (3) check if creating is needed, then alloc page for page table
-                          // CAUTION: this page is used for page table, not for common data page
-                          // (4) set page reference
-        uintptr_t pa = 0; // (5) get linear address of page
-                          // (6) clear page content using memset
-                          // (7) set page directory entry's permission
-    }
-    return NULL;          // (8) return page table entry
+    /* 原注释可参考官方 repo */
 #endif
     if(LOG_PMM){
         log("   对于指定的线性地址 la=0x%08lx,根据页目录pgdir=0x%08lx,返回其页表项pte.创建选项是%d.\n.",la, pgdir, create);
     }
-    // la 的一级页表索引=PDX(la)
-    // la 的一级页表项地址=&pgdir[PDX(la)]
-    // 若不存在,且给定 create 选项,则分配一个 page 并返回
-    // 对于这个 page 增加其引用计数.
+    // 1. 定位到一级页表项
+    //      la 的一级页表索引=PDX(la)
+    //      la 的一级页表项地址=&pgdir[PDX(la)]
     pde_t *pdep = &pgdir[PDX(la)];
+    // 2. 保证二级页表的存在性(如果指定 create)
+    //      一级页表项的 PTE_P 位标记了二级页表是否存在.实际上这正是按需分配内存的体现.
+    //      如果不存在,就可以专门申请一个page,来存储二级页表, 并更新一级页表项的状态.
     if (!(*pdep & PTE_P)) {
         struct Page *page;
         if (!create || (page = alloc_page()) == NULL) {
@@ -445,8 +461,15 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
         set_page_ref(page, 1);
         uintptr_t pa = page2pa(page);
         memset(KADDR(pa), 0, PGSIZE);
-        *pdep = pa | PTE_U | PTE_W | PTE_P;
+        *pdep = pa | PTE_U | PTE_W | PTE_P; // 更新一级页表项状态.默认状态是用户/可写/存在. 可以在上层更改状态,如设置为内核项.
     }
+    // 3. 定位二级页表
+    //      目前状态: 找到了此虚拟地址的一级页表项,且保证二级页表项是存在的.
+    //      *pdep: 一级页表项内容
+    //      PDE_ADDR(*pdep): 一级页表项内容中的物理地址部分(高 20位)
+    //      KADDR(PDE_ADDR(*pdep)): 一级页表项内容中的物理地址对应的内核虚拟地址,即二级页表基址
+    //      KADDR(PDE_ADDR(*pdep))[PTX(la)] 基于二级页表基址,用PTX(la)作为索引值,定位到二级页表项
+    //      最后&取二级页表项地址.
     return &((pte_t *)KADDR(PDE_ADDR(*pdep)))[PTX(la)];
 }
 
@@ -688,7 +711,7 @@ check_alloc_page(void) {
 
 static void
 check_pgdir(void) {
-    log("测试: page directory\n");
+    log("测试: page director相关函数y\n");
     assert(npage <= KMEMSIZE / PGSIZE);
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
@@ -835,3 +858,15 @@ print_pgdir(void) {
     }
     log("--- 当前页表信息:end ---\n");
 }
+
+
+/**
+ * 关于内存映射的一些计算:
+ * 
+ * Q 在进行地址映射时,ucore 的处理方式是,不考虑实际物理内存大小,而是直接按照设定的物理内存上限 KMEMSIZE 进行映射.
+ *      这种做法基于虚拟内存的思想,把完整的物理地址一股脑全部映射到虚拟地址空间指定的这一区域, 这个区域构成了内核在每个进程独立的运行区间.
+ * 
+ * 
+ * 
+ * 
+ */
