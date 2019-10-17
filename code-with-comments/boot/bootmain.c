@@ -109,7 +109,7 @@ bootmain(void) {
         readseg(ph->p_va & 0xFFFFFF, ph->p_memsz, ph->p_offset);
     }
 
-    // 调用 elf header 指定的 entry point
+    // 调用 elf header 指定的 entry point,即 entry.S 中的 kern_entry
     // note: does not return
     // 注意,这里也用 0xFFFFFF 对代码地址进行了阶段,强行虚拟地址...
     // 这样,对于内核的很高的虚拟地址的访问,都转化了在内存中较低的 1M 以内的访问.
@@ -156,4 +156,7 @@ bad:
  * LOAD           0x055000 0xc0154000 0xc0154000 0x05000 0x09324 RW  0x1000
  * 
  * 可见 Program Headers 中两个部分分别是 [.text .data)和 [.data, .bss].注意 ld 还定义了 .end
+ * 
+ * 
+ * 
  */ 

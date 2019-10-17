@@ -341,13 +341,14 @@ check_vma_struct(void) {
     cprintf("check_vma_struct() succeeded!\n");
 }
 
-struct mm_struct *check_mm_struct;
+struct mm_struct *check_mm_struct;  // 当前ucore 认为的合法虚拟内存空间集合
 
 // check_pgfault - pgfault handler 测试函数
 static void
 check_pgfault(void) {
     logline("开始测试: page fault");
-    log("原理: page fault");
+    log("   当前页表状态:\n");
+    print_pgdir();
 
     size_t nr_free_pages_store = nr_free_pages();
     log("初始可用页数: %u.\n",nr_free_pages_store);
@@ -361,15 +362,17 @@ check_pgfault(void) {
     log("此mm_struct的一级页表地址是:x%08lx.\n",pgdir);
     assert(pgdir[0] == 0);
 
-    log("   创建一个页目录项对应大小的 vma(4096KB*1K), start=0, end=0x%08lx B= %d M, flag=write,并插入到 mm 中.\n",PTSIZE, PTSIZE/1024/1024);
+
+    log("   创建一个页目录项对应大小的 vma(1024*4KB=4MB), 物理地址区间是[0,4M), flag=write,并插入到 mm 中.\n",PTSIZE, PTSIZE/1024/1024);
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
     assert(vma != NULL);
 
     insert_vma_struct(mm, vma);
 
-    uintptr_t addr = 0x100;
+    uintptr_t addr = 0x100; // = 256B
     assert(find_vma(mm, addr) == vma);
 
+    log("   开始对此区域进行写入\n");
     int i, sum = 0;
     for (i = 0; i < 100; i ++) {
         *(char *)(addr + i) = i;
@@ -379,8 +382,10 @@ check_pgfault(void) {
         sum -= *(char *)(addr + i);
     }
     assert(sum == 0);
-
+    log("   写入完毕,即将移除页表项\n");
     page_remove(pgdir, ROUNDDOWN(addr, PGSIZE));
+    log("   已移除addr所属内存页的页表项\n");
+
     free_page(pde2page(pgdir[0]));
     pgdir[0] = 0;
 
@@ -390,9 +395,7 @@ check_pgfault(void) {
 
     assert(nr_free_pages_store == nr_free_pages());
 
-    //cprintf("check_pgfault() succeeded!\n");
     logline("测试通过: page fault");
-
 }
 //page fault number
 volatile unsigned int pgfault_num=0;
@@ -539,7 +542,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
         }
    }
 #endif
-    // 1. 加载地址 addr对应的的页表项,不存在则创建
+    // 1. 加载地址 addr 在所属 mm 中对应的的二级页表项,不存在则创建
     log("开始恢复缺页异常\n");
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
         cprintf("get_pte in do_pgfault failed\n");

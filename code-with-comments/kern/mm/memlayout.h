@@ -38,8 +38,8 @@
  *                            |         Empty Memory (*)        |
  *                            |                                 |
  *                            +---------------------------------+ 0xFB000000
- *                            |   Cur. Page Table (Kern, RW)    | RW/-- PTSIZE
- *     VPT -----------------> +---------------------------------+ 0xFAC00000
+ *                            |   Cur. Page Table (Kern, RW)    | RW/-- PTSIZE  
+ *     VPT -----------------> +---------------------------------+ 0xFAC00000    内核页表起始虚地址
  *                            |        Invalid Memory (*)       | --/--
  *     KERNTOP -------------> +---------------------------------+ 0xF8000000
  *                            |                                 |
@@ -71,9 +71,9 @@
  * */
 
 /* 所有可管理的物理地址空间的映射: [0,KMEMSIZE)->[KERNBASE,KERNBASE+KMEMSIZE) */
-#define KERNBASE            0xC0000000                  // 内核运行态虚拟地址
-//#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限
-#define KMEMSIZE            0x00400000                  // 最小 4M,即 1 个 page entry 映射的字节数
+#define KERNBASE            0xC0000000                  // 内核运行态虚拟地址 = 3072M
+#define KMEMSIZE            0x38000000                  // 内核可管理物理内存空间上限 = 896MB
+//#define KMEMSIZE            0x00400000                  // 最小 4M,即 1 个 page entry 映射的字节数
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
 /* *
@@ -85,6 +85,7 @@
 /**
  * 虚拟页表. 一级页表内的项包含一个指向它自己的指针.
  * 0xFAC00000 = 1111 1010 1100 0000 0000 0000 0000 0000
+ *                          |              |          |
  */ 
 #define VPT                 0xFAC00000
 
@@ -141,13 +142,12 @@ struct e820map {
     } __attribute__((packed)) map[E820MAX];
 };
 
-/* *
- * struct Page - Page descriptor structures. Each Page describes one
- * physical page. In kern/mm/pmm.h, you can find lots of useful functions
- * that convert Page to other data types, such as phyical address.
- * */
+/**
+ * 内存页描述符结构,用于描述物理地址.
+ * kern/mm/pmm.h 中有很多函数实现 page 与 pa 或 va 的互转.
+ */ 
 struct Page {
-    int ref;                        // page frame's reference counter
+    int ref;                        // 页引用计数
     uint32_t flags;                 // array of flags that describe the status of the page frame
     unsigned int property;          // used in buddy system, stores the order (the X in 2^X) of the continuous memory block
     int zone_num;                   // used in buddy system, the No. of zone which the page belongs to

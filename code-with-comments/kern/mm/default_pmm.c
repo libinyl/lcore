@@ -4,19 +4,15 @@
 #include <default_pmm.h>
 
 #define DEFAULT_LOG_PMM 0
+/**
+ * "first fit"内存分配算法.
+ * allocator 维护着一个 free list,即空闲内存块链表.当接收到内存分配请求时,扫描这个 freelist,
+ * 找到第一个满足大小的块,将其分割,返回与请求大小相同的块,将剩余部分维护到 freelist.
+ * 
+ * 参考严蔚敏数据结构.
+ * 
+ */ 
 
-/*  In the First Fit algorithm, the allocator keeps a list of free blocks
- * (known as the free list). Once receiving a allocation request for memory,
- * it scans along the list for the first block that is large enough to satisfy
- * the request. If the chosen block is significantly larger than requested, it
- * is usually splitted, and the remainder will be added into the list as
- * another free block.
- *  Please refer to Page 196~198, Section 8.2 of Yan Wei Min's Chinese book
- * "Data Structure -- C programming language".
-*/
-// LAB2 EXERCISE 1: YOUR CODE
-// you should rewrite functions: `default_init`, `default_init_memmap`,
-// `default_alloc_pages`, `default_free_pages`.
 /*
  * Details of FFMA
  * (1) Preparation:

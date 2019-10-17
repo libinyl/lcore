@@ -264,13 +264,6 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
  */ 
 void
 print_kerninfo(void) {
-    logline("历史过程");
-    log("we know: CPU 启动,执行 BIOS, 从磁盘上第一个扇区加载(bootloader)并执行.\n");
-    log("we want: 让 cpu 正确加载 bootloader,也就是说要生成正确的虚拟磁盘文件.\n");
-    log("we do: ");
-    log("we test:");
-
-    log("内核已经建立的数据结构:\n");
 
     logline("内核设计规格:");
     extern char etext[], edata[], end[], kern_init[];
@@ -283,8 +276,9 @@ print_kerninfo(void) {
     log("   内核文件实际占用内存:\t%d KB\n", (end - kern_init + 1023)/1024);
     log("   内核可管理物理内存大小上限:\t0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
     log("   内核虚拟地址区间(B):\t\t[0x%08lx , 0x%08lx)\n",KERNBASE, KERNBASE + KMEMSIZE);
-    log("   内核虚拟地址区间(M):\t\t[%d M, %d M)\n", KERNBASE/1024/1024, (KERNBASE + KMEMSIZE)/1024/1024);
-    log("   内存分页大小 :\t\t%d KB\n\n", PGSIZE);
+    log("   内核虚拟地址区间(M):\t\t[%u M, %u M)\n", KERNBASE/1024/1024, (KERNBASE + KMEMSIZE)/1024/1024);
+
+    log("   内存分页大小 :\t\t%d B\n\n", PGSIZE);
 }
 
 /* *

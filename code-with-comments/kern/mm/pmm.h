@@ -56,7 +56,7 @@ void print_pgdir(void);
  * */
 
 /**
- * 内核虚拟地址对应的物理地址
+ * kernel virtual address => 物理地址
  */ 
 #define PADDR(kva) ({                                                   \
             uintptr_t __m_kva = (uintptr_t)(kva);                       \
@@ -66,10 +66,9 @@ void print_pgdir(void);
             __m_kva - KERNBASE;                                         \
         })
 
-/* *
- * KADDR - takes a physical address and returns the corresponding kernel virtual
- * address. It panics if you pass an invalid physical address.
- * */
+/**
+ * 物理地址 pa => kernel virtual address
+ */ 
 #define KADDR(pa) ({                                                    \
             uintptr_t __m_pa = (pa);                                    \
             size_t __m_ppn = PPN(__m_pa);                               \

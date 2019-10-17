@@ -351,20 +351,15 @@ boot_alloc_page(void) {
 void
 pmm_init(void) {
     logline("初始化开始:内存管理模块");
-    log("初始页表信息:\n");
+    log("目标: 根据实际内存情况,建立起虚拟内存机制.\n");
+    log("      kern_entry 最后仅配置了内核区域的虚拟地址映射,现在要建立完整的映射.\n");
 
     //print_pgdir();
 
-    // 之前已经开启了paging
+    // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量,用于内核一级页表基址.
     boot_cr3 = PADDR(boot_pgdir);
     log("内核页表物理基址: 0x%08lx\n",boot_cr3);
 
-
-    //We need to alloc/free the physical memory (granularity is 4KB or other size). 
-    //So a framework of physical memory manager (struct pmm_manager)is defined in pmm.h
-    //First we should init a physical memory manager(pmm) based on the framework.
-    //Then pmm can alloc/free the physical memory. 
-    //Now the first_fit/best_fit/worst_fit/buddy_system pmm are available.
     // 初始化物理内存分配器,之后即可使用其 alloc/free 的功能
     init_pmm_manager();
 
@@ -381,6 +376,7 @@ pmm_init(void) {
 
     // recursively insert boot_pgdir in itself
     // to form a virtual page table at virtual address VPT
+    // 把一级页表的第PDX(VPT)项设置为boot_pgdir本身的物理地址,即自映射
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
@@ -414,22 +410,7 @@ pmm_init(void) {
  */ 
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
-    /* LAB2 EXERCISE 2: YOUR CODE
-     *
-     * If you need to visit a physical address, please use KADDR()
-     * please read pmm.h for useful macros
-     *
-     * Maybe you want help comment, BELOW comments can help you finish the code
-     *
-     * Some Useful MACROs and DEFINEs, you can use them in below implementation.
-     * MACROs or Functions:
-     *   PDX(la) = the index of page directory entry of VIRTUAL ADDRESS la.
-     *   KADDR(pa) : takes a physical address and returns the corresponding kernel virtual address.
-     *   set_page_ref(page,1) : means the page be referenced by one time
-     *   page2pa(page): get the physical address of memory which this (struct Page *) page  manages
-     *   struct Page * alloc_page() : allocation a page
-     *   memset(void *s, char c, size_t n) : sets the first n bytes of the memory area pointed by s
-     *                                       to the specified value c.
+    /* 
      * DEFINEs:
      *   PTE_P           0x001                   // page table/directory entry flags bit : Present
      *   PTE_W           0x002                   // page table/directory entry flags bit : Writeable
@@ -450,6 +431,10 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     if(LOG_PMM){
         log("   对于指定的线性地址 la=0x%08lx,根据页目录pgdir=0x%08lx,返回其页表项pte.创建选项是%d.\n.",la, pgdir, create);
     }
+    // la 的一级页表索引=PDX(la)
+    // la 的一级页表项地址=&pgdir[PDX(la)]
+    // 若不存在,且给定 create 选项,则分配一个 page 并返回
+    // 对于这个 page 增加其引用计数.
     pde_t *pdep = &pgdir[PDX(la)];
     if (!(*pdep & PTE_P)) {
         struct Page *page;
@@ -609,7 +594,7 @@ copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end, bool share) {
     return 0;
 }
 
-//page_remove - free an Page which is related linear address la and has an validated pte
+// 移除 pgdir 中 la 对应的二级页表项
 void
 page_remove(pde_t *pgdir, uintptr_t la) {
     pte_t *ptep = get_pte(pgdir, la, 0);
@@ -805,6 +790,10 @@ perm2str(int perm) {
 //  left_store:  the pointer of the high side of table's next range
 //  right_store: the pointer of the low side of table's next range
 // return value: 0 - not a invalid item range, perm - a valid item range with perm permission 
+/**
+ * 获取页表项.
+ * 
+ */ 
 static int
 get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, size_t *left_store, size_t *right_store) {
     if (start >= right) {
@@ -832,7 +821,7 @@ get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, siz
 //print_pgdir - print the PDT&PT
 void
 print_pgdir(void) {
-    log("-------------------- 当前页表信息:begin --------------------\n");
+    log("--- 当前页表信息:begin ---\n");
     size_t left, right = 0, perm;
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
         cprintf("PDE(%03x) %08x-%08x %08x %s\n", right - left,
@@ -843,5 +832,5 @@ print_pgdir(void) {
                     l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
         }
     }
-    log("--------------------- 当前页表信息:end ---------------------\n");
+    log("--- 当前页表信息:end ---\n");
 }

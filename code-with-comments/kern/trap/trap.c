@@ -209,7 +209,7 @@ extern struct mm_struct *check_mm_struct;
 
 static void
 trap_dispatch(struct trapframe *tf) {
-    log("开始分发中断.中断号:\n",tf->tf_trapno);
+    //log("开始分发中断.中断号:%u\n",tf->tf_trapno);
     char c;
 
     int ret=0;
@@ -298,7 +298,7 @@ trap_dispatch(struct trapframe *tf) {
  */ 
 void
 trap(struct trapframe *tf) {
-    log("陷阱预处理,维护中断嵌套\n");
+    //log("陷阱预处理,维护中断嵌套\n");
     // 基于陷阱的类型,分发 trapframe
     if (current == NULL) {
         trap_dispatch(tf);
