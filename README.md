@@ -15,3 +15,6 @@
 *文件系统示意图*
 ![](https://github.com/libinyl/ucore-study/blob/master/images/%E7%9B%AE%E5%BD%95%E6%A0%91%E7%9A%84%E7%A3%81%E7%9B%98%E7%BA%A7%E8%A1%A8%E7%A4%BA2.png?raw=1)
 
+## todo
+
+- make debug-nox 会卡在 Continuing, 待修复. 使用不带 nox 的版本可以调试.

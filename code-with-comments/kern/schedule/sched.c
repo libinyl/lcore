@@ -61,10 +61,10 @@ sched_init(void) {
 
     rq = &__rq;
     rq->max_time_slice = 5;
-    log("运行队列初始时间片被设置为%u\n", rq->max_time_slice);
+    LOG("运行队列初始时间片被设置为%u\n", rq->max_time_slice);
     sched_class->init(rq);
 
-    log("sched class: %s\n", sched_class->name);
+    LOG("sched class: %s\n", sched_class->name);
     logline("初始化完毕:进程调度器");
 
 }
@@ -107,7 +107,7 @@ wakeup_proc(struct proc_struct *proc) {
  */ 
 void
 schedule(void) {
-    //log("进入 schedule函数!\n");
+    //LOG("进入 schedule函数!\n");
     bool intr_flag;
     struct proc_struct *next;
     local_intr_save(intr_flag);
@@ -185,7 +185,7 @@ del_timer(timer_t *timer) {
  */ 
 void
 run_timer_list(void) {
-    log("run_timer_list:\n");
+    LOG("run_timer_list:\n");
     bool intr_flag;
 
     local_intr_save(intr_flag);

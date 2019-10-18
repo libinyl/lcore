@@ -67,7 +67,7 @@ inode_ref_dec(struct inode *node) {
     ref_count = node->ref_count;
     if (ref_count == 0) {
         if ((ret = vop_reclaim(node)) != 0 && ret != -E_BUSY) {
-            log("vfs: warning: vop_reclaim: %e.\n", ret);
+            LOG("vfs: warning: vop_reclaim: %e.\n", ret);
         }
     }
     return ref_count;
@@ -96,7 +96,7 @@ inode_open_dec(struct inode *node) {
     open_count = node->open_count;
     if (open_count == 0) {
         if ((ret = vop_close(node)) != 0) {
-            log("vfs: warning: vop_close: %e.\n", ret);
+            LOG("vfs: warning: vop_close: %e.\n", ret);
         }
     }
     return open_count;

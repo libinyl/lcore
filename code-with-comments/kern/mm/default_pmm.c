@@ -1,9 +1,9 @@
 #include <pmm.h>
 #include <list.h>
 #include <string.h>
+#include <stdio.h>
 #include <default_pmm.h>
 
-#define DEFAULT_LOG_PMM 0
 /**
  * "first fit"内存分配算法.
  * allocator 维护着一个 free list,即空闲内存块链表.当接收到内存分配请求时,扫描这个 freelist,
@@ -115,8 +115,8 @@ default_init_memmap(struct Page *base, size_t n) {
     SetPageProperty(base);
     nr_free += n;
     list_add_before(&free_list, &(base->page_link));
-    log("   已将一块连续地址空间加入 freelist,起始: 0x%08lx, page 数:%d.\n", base, n);
-    log("   当前空闲 page 数:%d\n",nr_free);
+    LOG("   已将一块连续地址空间加入 freelist,起始: 0x%08lx, page 数:%d.\n", base, n);
+    LOG("   当前空闲 page 数:%d\n",nr_free);
 }
 
 static struct Page *
@@ -146,9 +146,9 @@ default_alloc_pages(size_t n) {
         nr_free -= n;
         ClearPageProperty(page);
     }
-    if(DEFAULT_LOG_PMM){
-        log("default_alloc_pages: 分配了一页内存\n");
-    }
+
+    LOG("default_alloc_pages: 分配了一页内存\n");
+
     return page;
 }
 
@@ -251,7 +251,7 @@ basic_check(void) {
 
 static void
 default_check(void) {
-    log("   开始检查内存页分配与回收功能.\n");
+    LOG("   开始检查内存页分配与回收功能.\n");
     int count = 0, total = 0;
     list_entry_t *le = &free_list;
     while ((le = list_next(le)) != &free_list) {

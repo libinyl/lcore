@@ -55,7 +55,7 @@ mm_create(void) {
         set_mm_count(mm, 0);
         sem_init(&(mm->mm_sem), 1);
     }    
-    log("初始化了一个 mm_struct.\n");
+    LOG("初始化了一个 mm_struct.\n");
     return mm;
 }
 
@@ -69,7 +69,7 @@ vma_create(uintptr_t vm_start, uintptr_t vm_end, uint32_t vm_flags) {
         vma->vm_end = vm_end;
         vma->vm_flags = vm_flags;
     }
-    //log("创建了一个 vma. vm_start: %lu, vm_end: %lu, vm_flags: %u\n",vm_start, vm_end, vm_flags);
+    //LOG("创建了一个 vma. vm_start: %lu, vm_end: %lu, vm_flags: %u\n",vm_start, vm_end, vm_flags);
     return vma;
 }
 
@@ -270,23 +270,23 @@ check_vmm(void) {
     check_vma_struct();
     check_pgfault();
 
-    log("check_vmm() succeeded.\n");
+    LOG("check_vmm() succeeded.\n");
 }
 
 // https://chyyuu.gitbooks.io/ucore_os_docs/content/lab3/lab3_5_2_page_swapping_principles.html
 static void
 check_vma_struct(void) {
     size_t nr_free_pages_store = nr_free_pages();
-    log("   开始测试 vma结构.\n");
-    log("   测试点: 是否正确把 vma插入到 mm,是否有重叠,是否能从 mm 找到某个地址所在的 vma.\n");
+    LOG("   开始测试 vma结构.\n");
+    LOG("   测试点: 是否正确把 vma插入到 mm,是否有重叠,是否能从 mm 找到某个地址所在的 vma.\n");
 
-    log("   当前空闲 page 数:%d\n",nr_free_pages_store);
+    LOG("   当前空闲 page 数:%d\n",nr_free_pages_store);
 
     struct mm_struct *mm = mm_create();
     assert(mm != NULL);
 
     int step1 = 10, step2 = step1 * 10;
-    log("   从 5 到 50, 以及从 55 到 500,每隔 5 个字节创建一个 vma, 长度是 2;全部插入到 mm 链表中.\n");
+    LOG("   从 5 到 50, 以及从 55 到 500,每隔 5 个字节创建一个 vma, 长度是 2;全部插入到 mm 链表中.\n");
     int i;
     for (i = step1; i >= 1; i --) {
         struct vma_struct *vma = vma_create(i * 5, i * 5 + 2, 0);
@@ -299,7 +299,7 @@ check_vma_struct(void) {
         assert(vma != NULL);
         insert_vma_struct(mm, vma);
     }
-    log("   插入结束,mm 所维护的 vma 数量为%d\n",mm->map_count);
+    LOG("   插入结束,mm 所维护的 vma 数量为%d\n",mm->map_count);
 
     list_entry_t *le = list_next(&(mm->mmap_list));
 
@@ -329,7 +329,7 @@ check_vma_struct(void) {
     for (i =4; i>=0; i--) {
         struct vma_struct *vma_below_5= find_vma(mm,i);
         if (vma_below_5 != NULL ) {
-           log("vma_below_5: i %x, start %x, end %x\n",i, vma_below_5->vm_start, vma_below_5->vm_end); 
+           LOG("vma_below_5: i %x, start %x, end %x\n",i, vma_below_5->vm_start, vma_below_5->vm_end); 
         }
         assert(vma_below_5 == NULL);
     }
@@ -338,7 +338,7 @@ check_vma_struct(void) {
 
   //  assert(nr_free_pages_store == nr_free_pages());
 
-    log("check_vma_struct() succeeded!\n");
+    LOG("check_vma_struct() succeeded!\n");
 }
 
 struct mm_struct *check_mm_struct;  // 当前ucore 认为的合法虚拟内存空间集合
@@ -347,11 +347,11 @@ struct mm_struct *check_mm_struct;  // 当前ucore 认为的合法虚拟内存�
 static void
 check_pgfault(void) {
     logline("开始测试: page fault");
-    log("   当前页表状态:\n");
+    LOG("   当前页表状态:\n");
     print_pgdir();
 
     size_t nr_free_pages_store = nr_free_pages();
-    log("初始可用页数: %u.\n",nr_free_pages_store);
+    LOG("初始可用页数: %u.\n",nr_free_pages_store);
     
 
     check_mm_struct = mm_create();
@@ -359,11 +359,11 @@ check_pgfault(void) {
 
     struct mm_struct *mm = check_mm_struct;
     pde_t *pgdir = mm->pgdir = boot_pgdir;
-    log("此mm_struct的一级页表地址是:x%08lx.\n",pgdir);
+    LOG("此mm_struct的一级页表地址是:x%08lx.\n",pgdir);
     assert(pgdir[0] == 0);
 
 
-    log("   创建一个页目录项对应大小的 vma(1024*4KB=4MB), 物理地址区间是[0,4M), flag=write,并插入到 mm 中.\n",PTSIZE, PTSIZE/1024/1024);
+    LOG("   创建一个页目录项对应大小的 vma(1024*4KB=4MB), 物理地址区间是[0,4M), flag=write,并插入到 mm 中.\n",PTSIZE, PTSIZE/1024/1024);
     struct vma_struct *vma = vma_create(0, PTSIZE, VM_WRITE);
     assert(vma != NULL);
 
@@ -372,7 +372,7 @@ check_pgfault(void) {
     uintptr_t addr = 0x100; // = 256B
     assert(find_vma(mm, addr) == vma);
 
-    log("   开始对此区域进行写入\n");
+    LOG("   开始对此区域进行写入\n");
     int i, sum = 0;
     for (i = 0; i < 100; i ++) {
         *(char *)(addr + i) = i;
@@ -382,9 +382,9 @@ check_pgfault(void) {
         sum -= *(char *)(addr + i);
     }
     assert(sum == 0);
-    log("   写入完毕,即将移除页表项\n");
+    LOG("   写入完毕,即将移除页表项\n");
     page_remove(pgdir, ROUNDDOWN(addr, PGSIZE));
-    log("   已移除addr所属内存页的页表项\n");
+    LOG("   已移除addr所属内存页的页表项\n");
 
     free_page(pde2page(pgdir[0]));
     pgdir[0] = 0;
@@ -425,20 +425,20 @@ volatile unsigned int pgfault_num=0;
  */
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
-    log("do_pgfault:  分析并处理缺页.");
-    log("cpu 已将触发异常的地址置于 cr2 寄存器,值为: x%08lx.\n",addr);
-    log("此异常错误码: %d\n",error_code);
+    LOG("do_pgfault:  分析并处理缺页.");
+    LOG("cpu 已将触发异常的地址置于 cr2 寄存器,值为: x%08lx.\n",addr);
+    LOG("此异常错误码: %d\n",error_code);
 
     int ret = -E_INVAL;
     // 找到此地址所在的 vma
     
     struct vma_struct *vma = find_vma(mm, addr);
-    log("已通过find_vma获取此地址在 mm_struct 中对应的 vma.\n");
+    LOG("已通过find_vma获取此地址在 mm_struct 中对应的 vma.\n");
 
     pgfault_num++;
     // 若未找到 vma,或找到的 vma 的起始地址不正常(大于 addr),则不合法
     if (vma == NULL || vma->vm_start > addr) {
-        log("not valid addr %x, and  can not find it in vma\n", addr);
+        LOG("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
     // 考察错误码,即 page fault 分类
@@ -449,17 +449,17 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     case 2: 
         /* 错误码: 写入缺页地址 : (W/R=1, P=0) */
         if (!(vma->vm_flags & VM_WRITE)) {// 属性校验结果异常
-            log("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
+            LOG("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
             goto failed;
         }
         break;
     case 1: /* 错误码: 读取存在的地址 : (W/R=0, P=1): read, present */
         // 读取已存在页不应该出现错误码
-        log("do_pgfault failed: error code flag = read AND present\n");
+        LOG("do_pgfault failed: error code flag = read AND present\n");
         goto failed;
     case 0: /* 错误码:读取缺页地址 (W/R=0, P=0): read, not present */
         if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {// 属性校验结果异常
-            log("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
+            LOG("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
             goto failed;
         }
     }
@@ -530,27 +530,27 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
                                     //(4) [NOTICE]: you myabe need to update your lab3's implementation for LAB5's normal execution.
         }
         else {
-            log("no swap_init_ok but ptep is %x, failed\n",*ptep);
+            LOG("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
         }
    }
 #endif
     // 1. 加载地址 addr 在所属 mm 中对应的的二级页表项,不存在则创建
-    log("开始恢复缺页异常\n");
+    LOG("开始恢复缺页异常\n");
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
-        log("get_pte in do_pgfault failed\n");
+        LOG("get_pte in do_pgfault failed\n");
         goto failed;
     }
-    log("已得到此地址的页表项\n");
+    LOG("已得到此地址的页表项\n");
     if (*ptep == 0) { // 1. 若页表项中物理地址的值为空,则分配一个物理页并将 addr 映射过去
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
-            log("pgdir_alloc_page in do_pgfault failed\n");
+            LOG("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;
         }
     }
     else {
         struct Page *page=NULL;
-        log("do pgfault: ptep %x, pte %x\n",ptep, *ptep);
+        LOG("do pgfault: ptep %x, pte %x\n",ptep, *ptep);
         if (*ptep & PTE_P) {
             //if process write to this existed readonly page (PTE_P means existed), then should be here now.
             //we can implement the delayed memory space copy for fork child process (AKA copy on write, COW).
@@ -562,13 +562,13 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
            // and call page_insert to map the phy addr with logical addr
            if(swap_init_ok) {               
                if ((ret = swap_in(mm, addr, &page)) != 0) {
-                   log("swap_in in do_pgfault failed\n");
+                   LOG("swap_in in do_pgfault failed\n");
                    goto failed;
                }    
 
            }  
            else {
-            log("no swap_init_ok but ptep is %x, failed\n",*ptep);
+            LOG("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
            }
        } 

@@ -115,7 +115,7 @@ static void
 sfs_cleanup(struct fs *fs) {
     struct sfs_fs *sfs = fsop_info(fs, sfs);
     uint32_t blocks = sfs->super.blocks, unused_blocks = sfs->super.unused_blocks;
-    log("sfs: cleanup: '%s' (%d/%d/%d)\n", sfs->super.info,
+    LOG("sfs: cleanup: '%s' (%d/%d/%d)\n", sfs->super.info,
             blocks - unused_blocks, unused_blocks, blocks);
     int i, ret;
     for (i = 0; i < 32; i ++) {
@@ -217,12 +217,12 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
 
     struct sfs_super *super = sfs_buffer;
     if (super->magic != SFS_MAGIC) {
-        log("sfs: wrong magic in superblock. (%08x should be %08x).\n",
+        LOG("sfs: wrong magic in superblock. (%08x should be %08x).\n",
                 super->magic, SFS_MAGIC);
         goto failed_cleanup_sfs_buffer;
     }
     if (super->blocks > dev->d_blocks) {
-        log("sfs: fs has %u blocks, device has %u blocks.\n",
+        LOG("sfs: fs has %u blocks, device has %u blocks.\n",
                 super->blocks, dev->d_blocks);
         goto failed_cleanup_sfs_buffer;
     }
@@ -267,7 +267,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     sem_init(&(sfs->io_sem), 1);
     sem_init(&(sfs->mutex_sem), 1);
     list_init(&(sfs->inode_list));
-    log("sfs: mount: '%s' (%d/%d/%d)\n", sfs->super.info,
+    LOG("sfs: mount: '%s' (%d/%d/%d)\n", sfs->super.info,
             blocks - unused_blocks, unused_blocks, blocks);
 
     /* link addr of sync/get_root/unmount/cleanup funciton  fs's function pointers*/

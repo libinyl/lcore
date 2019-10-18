@@ -36,7 +36,12 @@
         "ios": "c",
         "*.tcc": "c",
         "elf.h": "c",
-        "error.h": "c"
+        "error.h": "c",
+        "default_pmm.h": "c",
+        "list.h": "c",
+        "memlayout.h": "c",
+        "atomic.h": "c",
+        "mmu.h": "c"
     },
     "workbench.colorCustomizations": {
         "activityBar.background": "#ef7853",

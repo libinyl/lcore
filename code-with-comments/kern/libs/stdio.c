@@ -5,32 +5,6 @@
 #include <string.h>
 /* HIGH level console I/O */
 
-#define LOG_ALL_ON 0    // 日志总开关
-#define LOG_PMM_ON 1    // pmm 模块开关
-#define LOG_VMM_ON 1    // vmm 模块开关
-
-#define __MODULE_INIT_  "kern/mm/init.c"
-#define __MODULE_PMM_   "kern/mm/pmm.c"
-#define __MODULE_VMM_   "kern/mm/vmm.c"
-
-
-// #define LOG_CHECK()\
-//     ({\
-//         if(!LOG_ALL_ON) {0;}\
-//         if(!strcmp(__FILE__, __MODULE_PMM_) && LOG_PMM_ON){\
-//             1;
-//         }\
-//     })
-
-int
-log_check(){
-    if(!LOG_ALL_ON) return 0;
-    if(!strcmp(__FILE__, __MODULE_INIT_) && LOG_PMM_ON) return 1;
-    if(!strcmp(__FILE__, __MODULE_PMM_) && LOG_PMM_ON) return 1;
-    if(!strcmp(__FILE__, __MODULE_VMM_) && LOG_VMM_ON) return 1;
-    return 1;
-}
-
 /* *
  * cputch - writes a single character @c to stdout, and it will
  * increace the value of counter pointed by @cnt.
@@ -103,10 +77,20 @@ getchar(void) {
     return c;
 }
 
+// todo: 用宏代替 logcheck 函数
+int
+log_check(const char *filename){
+    if(!LOG_MODULE_ALL_ON) return 0;
+    if(!strcmp(filename, __MODULE_INIT_) && LOG_INIT_ON) return 1;
+    if(!strcmp(filename, __MODULE_PMM_) && LOG_PMM_ON) return 1;
+    if(!strcmp(filename, __MODULE_VMM_) && LOG_VMM_ON) return 1;
+    if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
+    if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;
+    return 0;
+}
+
 int
 log(const char *fmt, ...) {
-    if(!log_check())
-        return;
     va_list ap;
     int cnt;
     va_start(ap, fmt);
@@ -114,7 +98,8 @@ log(const char *fmt, ...) {
     va_end(ap);
     return cnt;
 }
-void logline(const char *str) {
-    log("\n\n--------------%s--------------\n\n",str);
 
+void logline(const char *str) {
+    if (LOG_LINE_ON)
+        cprintf("\n\n--------------%s--------------\n\n",str);
 }

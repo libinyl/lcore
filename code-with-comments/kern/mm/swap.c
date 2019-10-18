@@ -48,7 +48,7 @@ swap_init(void)
      if (r == 0)
      {
           swap_init_ok = 1;
-          log("SWAP: manager = %s\n", sm->name);
+          LOG("SWAP: manager = %s\n", sm->name);
           check_swap();
      }
 
@@ -85,35 +85,35 @@ volatile unsigned int swap_out_num=0;
 int
 swap_out(struct mm_struct *mm, int n, int in_tick)
 {
-     log("页换出处理\n.");
-     log("");
+     LOG("页换出处理\n.");
+     LOG("");
      int i;
      for (i = 0; i != n; ++ i)
      {
           uintptr_t v;
           //struct Page **ptr_page=NULL;
           struct Page *page;
-          // log("i %d, SWAP: call swap_out_victim\n",i);
+          // LOG("i %d, SWAP: call swap_out_victim\n",i);
           int r = sm->swap_out_victim(mm, &page, in_tick);
           if (r != 0) {
-                    log("i %d, swap_out: call swap_out_victim failed\n",i);
+                    LOG("i %d, swap_out: call swap_out_victim failed\n",i);
                   break;
           }          
           //assert(!PageReserved(page));
 
-          //log("SWAP: choose victim page 0x%08x\n", page);
+          //LOG("SWAP: choose victim page 0x%08x\n", page);
           
           v=page->pra_vaddr; 
           pte_t *ptep = get_pte(mm->pgdir, v, 0);
           assert((*ptep & PTE_P) != 0);
 
           if (swapfs_write( (page->pra_vaddr/PGSIZE+1)<<8, page) != 0) {
-                    log("SWAP: failed to save\n");
+                    LOG("SWAP: failed to save\n");
                     sm->map_swappable(mm, v, page, 0);
                     continue;
           }
           else {
-                    log("swap_out: i %d, store page in vaddr 0x%x to disk swap entry %d\n", i, v, page->pra_vaddr/PGSIZE+1);
+                    LOG("swap_out: i %d, store page in vaddr 0x%x to disk swap entry %d\n", i, v, page->pra_vaddr/PGSIZE+1);
                     *ptep = (page->pra_vaddr/PGSIZE+1)<<8;
                     free_page(page);
           }
@@ -130,14 +130,14 @@ swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result)
      assert(result!=NULL);
 
      pte_t *ptep = get_pte(mm->pgdir, addr, 0);
-     // log("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
+     // LOG("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
     
      int r;
      if ((r = swapfs_read((*ptep), result)) != 0)
      {
         assert(r!=0);
      }
-     log("swap_in: load disk swap entry %d with swap_page in vadr 0x%x\n", (*ptep)>>8, addr);
+     LOG("swap_in: load disk swap entry %d with swap_page in vadr 0x%x\n", (*ptep)>>8, addr);
      *ptr_result=result;
      return 0;
 }
@@ -193,7 +193,7 @@ check_swap(void)
         count ++, total += p->property;
      }
      assert(total == nr_free_pages());
-     log("BEGIN check_swap: count %d, total %d\n",count,total);// count: 连续空闲块数量 total: 空闲 page 数量
+     LOG("BEGIN check_swap: count %d, total %d\n",count,total);// count: 连续空闲块数量 total: 空闲 page 数量
      
      //now we set the phy pages env     
      // 1. 创建内存描述符
@@ -215,11 +215,11 @@ check_swap(void)
      insert_vma_struct(mm, vma);
 
      //setup the temp Page Table vaddr 0~4MB
-     log("setup Page Table for vaddr 0X1000, so alloc a page\n");
+     LOG("setup Page Table for vaddr 0X1000, so alloc a page\n");
      pte_t *temp_ptep=NULL;
      temp_ptep = get_pte(mm->pgdir, BEING_CHECK_VALID_VADDR, 1);
      assert(temp_ptep!= NULL);
-     log("setup Page Table vaddr 0~4MB OVER!\n");
+     LOG("setup Page Table vaddr 0~4MB OVER!\n");
      
      for (i=0;i<CHECK_VALID_PHY_PAGE_NUM;i++) {
           check_rp[i] = alloc_page();
@@ -239,7 +239,7 @@ check_swap(void)
      }
      assert(nr_free==CHECK_VALID_PHY_PAGE_NUM);
      
-     log("set up init env for check_swap begin!\n");
+     LOG("set up init env for check_swap begin!\n");
      //setup initial vir_page<->phy_page environment for page relpacement algorithm 
 
      
@@ -253,12 +253,12 @@ check_swap(void)
      for (i= 0;i<CHECK_VALID_PHY_PAGE_NUM;i++) {
          check_ptep[i]=0;
          check_ptep[i] = get_pte(pgdir, (i+1)*0x1000, 0);
-         //log("i %d, check_ptep addr %x, value %x\n", i, check_ptep[i], *check_ptep[i]);
+         //LOG("i %d, check_ptep addr %x, value %x\n", i, check_ptep[i], *check_ptep[i]);
          assert(check_ptep[i] != NULL);
          assert(pte2page(*check_ptep[i]) == check_rp[i]);
          assert((*check_ptep[i] & PTE_P));          
      }
-     log("set up init env for check_swap over!\n");
+     LOG("set up init env for check_swap over!\n");
      // now access the virt pages to test  page relpacement algorithm 
      ret=check_content_access();
      assert(ret==0);
@@ -284,8 +284,8 @@ check_swap(void)
          struct Page *p = le2page(le, page_link);
          count --, total -= p->property;
      }
-     log("count is %d, total is %d\n",count,total);
+     LOG("count is %d, total is %d\n",count,total);
      //assert(count == 0);
      
-     log("check_swap() succeeded!\n");
+     LOG("check_swap() succeeded!\n");
 }

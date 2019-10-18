@@ -18,12 +18,11 @@
 #include <proc.h>
 
 #define TICK_NUM 100
-#define LOG_INT_INFO 0
 
 static void print_ticks() {
-    log("%d ticks\n",TICK_NUM);
+    LOG("%d ticks\n",TICK_NUM);
 #ifdef DEBUG_GRADE
-    log("End of Test.\n");
+    LOG("End of Test.\n");
     panic("EOT: kernel seems ok.");
 #endif
 }
@@ -58,17 +57,17 @@ idt_init(void) {
     lidt(&idt_pd);
 
     // 输出信息
-    if(LOG_INT_INFO){
-        log("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
-        for (i = 0; i < sizeof(idt) / sizeof(struct gatedesc); i ++) {
-            log("0x%x\t",i);
-            log("%s\t", idt[i].gd_type==STS_TG32?"y":"n");
-            log("%s\t", "GD_KTEXT");
-            log("0x%x\t", __vectors[i]);
-            log("%d",idt[i].gd_dpl);
-            log("\n");
-        }
+
+    LOG("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
+    for (i = 0; i < sizeof(idt) / sizeof(struct gatedesc); i ++) {
+        LOG("0x%x\t",i);
+        LOG("%s\t", idt[i].gd_type==STS_TG32?"y":"n");
+        LOG("%s\t", "GD_KTEXT");
+        LOG("0x%x\t", __vectors[i]);
+        LOG("%d",idt[i].gd_dpl);
+        LOG("\n");
     }
+
     logline("初始化完毕:中断向量表");
 }
 
@@ -123,54 +122,54 @@ static const char *IA32flags[] = {
 
 void
 print_trapframe(struct trapframe *tf) {
-    log("trapframe at %p\n", tf);
+    LOG("trapframe at %p\n", tf);
     print_regs(&tf->tf_regs);
-    log("  ds   0x----%04x\n", tf->tf_ds);
-    log("  es   0x----%04x\n", tf->tf_es);
-    log("  fs   0x----%04x\n", tf->tf_fs);
-    log("  gs   0x----%04x\n", tf->tf_gs);
-    log("  trap 0x%08x %s\n", tf->tf_trapno, trapname(tf->tf_trapno));
-    log("  err  0x%08x\n", tf->tf_err);
-    log("  eip  0x%08x\n", tf->tf_eip);
-    log("  cs   0x----%04x\n", tf->tf_cs);
-    log("  flag 0x%08x ", tf->tf_eflags);
+    LOG("  ds   0x----%04x\n", tf->tf_ds);
+    LOG("  es   0x----%04x\n", tf->tf_es);
+    LOG("  fs   0x----%04x\n", tf->tf_fs);
+    LOG("  gs   0x----%04x\n", tf->tf_gs);
+    LOG("  trap 0x%08x %s\n", tf->tf_trapno, trapname(tf->tf_trapno));
+    LOG("  err  0x%08x\n", tf->tf_err);
+    LOG("  eip  0x%08x\n", tf->tf_eip);
+    LOG("  cs   0x----%04x\n", tf->tf_cs);
+    LOG("  flag 0x%08x ", tf->tf_eflags);
 
     int i, j;
     for (i = 0, j = 1; i < sizeof(IA32flags) / sizeof(IA32flags[0]); i ++, j <<= 1) {
         if ((tf->tf_eflags & j) && IA32flags[i] != NULL) {
-            log("%s,", IA32flags[i]);
+            LOG("%s,", IA32flags[i]);
         }
     }
-    log("IOPL=%d\n", (tf->tf_eflags & FL_IOPL_MASK) >> 12);
+    LOG("IOPL=%d\n", (tf->tf_eflags & FL_IOPL_MASK) >> 12);
 
     if (!trap_in_kernel(tf)) {
-        log("  esp  0x%08x\n", tf->tf_esp);
-        log("  ss   0x----%04x\n", tf->tf_ss);
+        LOG("  esp  0x%08x\n", tf->tf_esp);
+        LOG("  ss   0x----%04x\n", tf->tf_ss);
     }
 }
 
 void
 print_regs(struct pushregs *regs) {
-    log("  edi  0x%08x\n", regs->reg_edi);
-    log("  esi  0x%08x\n", regs->reg_esi);
-    log("  ebp  0x%08x\n", regs->reg_ebp);
-    log("  oesp 0x%08x\n", regs->reg_oesp);
-    log("  ebx  0x%08x\n", regs->reg_ebx);
-    log("  edx  0x%08x\n", regs->reg_edx);
-    log("  ecx  0x%08x\n", regs->reg_ecx);
-    log("  eax  0x%08x\n", regs->reg_eax);
+    LOG("  edi  0x%08x\n", regs->reg_edi);
+    LOG("  esi  0x%08x\n", regs->reg_esi);
+    LOG("  ebp  0x%08x\n", regs->reg_ebp);
+    LOG("  oesp 0x%08x\n", regs->reg_oesp);
+    LOG("  ebx  0x%08x\n", regs->reg_ebx);
+    LOG("  edx  0x%08x\n", regs->reg_edx);
+    LOG("  ecx  0x%08x\n", regs->reg_ecx);
+    LOG("  eax  0x%08x\n", regs->reg_eax);
 }
 
 static inline void
 print_pgfault(struct trapframe *tf) {
-    log("缺页异常信息:\n");
+    LOG("缺页异常信息:\n");
 
     /* error_code:
      * bit 0 == 0 means no page found, 1 means protection fault
      * bit 1 == 0 means read, 1 means write
      * bit 2 == 0 means kernel, 1 means user
      * */
-    log("   page fault at 0x%08x,解析错误码,得到触发原因: %c/%c [%s].\n", rcr2(),
+    LOG("   page fault at 0x%08x,解析错误码,得到触发原因: %c/%c [%s].\n", rcr2(),
             (tf->tf_err & 4) ? 'U' : 'K',
             (tf->tf_err & 2) ? 'W' : 'R',
             (tf->tf_err & 1) ? "protection fault" : "no page found");
@@ -184,7 +183,7 @@ print_pgfault(struct trapframe *tf) {
  */ 
 static int
 pgfault_handler(struct trapframe *tf) {
-    log("pgfault_handler: 开始处理缺页;\n");
+    LOG("pgfault_handler: 开始处理缺页;\n");
 
     extern struct mm_struct *check_mm_struct;
     if(check_mm_struct !=NULL) { //used for test check_swap
@@ -203,7 +202,7 @@ pgfault_handler(struct trapframe *tf) {
         }
         mm = current->mm;
     }
-    log("已获取触发缺页的 mm_struct\n");
+    LOG("已获取触发缺页的 mm_struct\n");
     return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
@@ -212,14 +211,14 @@ extern struct mm_struct *check_mm_struct;
 
 static void
 trap_dispatch(struct trapframe *tf) {
-    //log("开始分发中断.中断号:%u\n",tf->tf_trapno);
+    //LOG("开始分发中断.中断号:%u\n",tf->tf_trapno);
     char c;
 
     int ret=0;
 
     switch (tf->tf_trapno) {
     case T_PGFLT:  //page fault
-        log("内核检测到缺页异常中断.\n");
+        LOG("内核检测到缺页异常中断.\n");
         if ((ret = pgfault_handler(tf)) != 0) {
             print_trapframe(tf);
             if (current == NULL) {
@@ -229,7 +228,7 @@ trap_dispatch(struct trapframe *tf) {
                 if (trap_in_kernel(tf)) {
                     panic("handle pgfault failed in kernel mode. ret=%d\n", ret);
                 }
-                log("killed by kernel.\n");
+                LOG("killed by kernel.\n");
                 panic("handle user mode pgfault failed. ret=%d\n", ret); 
                 do_exit(-E_KILLED);
             }
@@ -255,7 +254,7 @@ trap_dispatch(struct trapframe *tf) {
         ticks ++;
         assert(current != NULL);
         // if(ticks%(100)==0){
-        //     log("触发了秒级时钟中断.\n");
+        //     LOG("触发了秒级时钟中断.\n");
         //     //调试 hack: 降低系统的进程切换时间
         //     // ticks 每次增加时过去了 10 毫秒,那么是 100 的倍数时经过 1 秒
         //     // n秒即是 100*n
@@ -264,11 +263,11 @@ trap_dispatch(struct trapframe *tf) {
         break;
     case IRQ_OFFSET + IRQ_COM1:
         //c = cons_getc();
-        //log("serial [%03d] %c\n", c, c);
+        //LOG("serial [%03d] %c\n", c, c);
         //break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
-        //log("kbd [%03d] %c\n", c, c);
+        //LOG("kbd [%03d] %c\n", c, c);
         {
           extern void dev_stdin_write(char c);
           dev_stdin_write(c);
@@ -286,7 +285,7 @@ trap_dispatch(struct trapframe *tf) {
     default:
         print_trapframe(tf);
         if (current != NULL) {
-            log("unhandled trap.\n");
+            LOG("unhandled trap.\n");
             do_exit(-E_KILLED);
         }
         // in kernel, it must be a mistake
@@ -301,7 +300,7 @@ trap_dispatch(struct trapframe *tf) {
  */ 
 void
 trap(struct trapframe *tf) {
-    //log("陷阱预处理,维护中断嵌套\n");
+    //LOG("陷阱预处理,维护中断嵌套\n");
     // 基于陷阱的类型,分发 trapframe
     if (current == NULL) {
         trap_dispatch(tf);

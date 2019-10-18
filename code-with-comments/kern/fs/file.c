@@ -122,7 +122,7 @@ fd_array_close(struct file *file) {
 //fs_array_dup - duplicate file 'from'  to file 'to'
 void
 fd_array_dup(struct file *to, struct file *from) {
-    //log("[fd_array_dup]from fd=%d, to fd=%d\n",from->fd, to->fd);
+    //LOG("[fd_array_dup]from fd=%d, to fd=%d\n",from->fd, to->fd);
     assert(to->status == FD_INIT && from->status == FD_OPENED);
     to->pos = from->pos;
     to->readable = from->readable;
@@ -322,7 +322,7 @@ file_seek(int fd, off_t pos, int whence) {
         if ((ret = vop_tryseek(file->node, pos)) == 0) {
             file->pos = pos;
         }
-//    log("file_seek, pos=%d, whence=%d, ret=%d\n", pos, whence, ret);
+//    LOG("file_seek, pos=%d, whence=%d, ret=%d\n", pos, whence, ret);
     }
     fd_array_release(file);
     return ret;

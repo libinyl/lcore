@@ -36,7 +36,7 @@ _fifo_init_mm(struct mm_struct *mm)
 {     
      list_init(&pra_list_head);
      mm->sm_priv = &pra_list_head;
-     //log(" mm->sm_priv %x in fifo_init_mm\n",mm->sm_priv);
+     //LOG(" mm->sm_priv %x in fifo_init_mm\n",mm->sm_priv);
      return 0;
 }
 /*
@@ -64,7 +64,7 @@ _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int
 static int
 _fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
 {
-    log("fifo 页换出处理\n");
+    LOG("fifo 页换出处理\n");
     
      list_entry_t *head=(list_entry_t*) mm->sm_priv;
          assert(head != NULL);
@@ -85,40 +85,40 @@ _fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick
 
 static int
 _fifo_check_swap(void) {
-    log("write Virt Page c in fifo_check_swap\n");
+    LOG("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *)0x3000 = 0x0c;
     assert(pgfault_num==4);
-    log("write Virt Page a in fifo_check_swap\n");
+    LOG("write Virt Page a in fifo_check_swap\n");
     *(unsigned char *)0x1000 = 0x0a;
     assert(pgfault_num==4);
-    log("write Virt Page d in fifo_check_swap\n");
+    LOG("write Virt Page d in fifo_check_swap\n");
     *(unsigned char *)0x4000 = 0x0d;
     assert(pgfault_num==4);
-    log("write Virt Page b in fifo_check_swap\n");
+    LOG("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *)0x2000 = 0x0b;
     assert(pgfault_num==4);
-    log("write Virt Page e in fifo_check_swap\n");
+    LOG("write Virt Page e in fifo_check_swap\n");
     *(unsigned char *)0x5000 = 0x0e;
     assert(pgfault_num==5);
-    log("write Virt Page b in fifo_check_swap\n");
+    LOG("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *)0x2000 = 0x0b;
     assert(pgfault_num==5);
-    log("write Virt Page a in fifo_check_swap\n");
+    LOG("write Virt Page a in fifo_check_swap\n");
     *(unsigned char *)0x1000 = 0x0a;
     assert(pgfault_num==6);
-    log("write Virt Page b in fifo_check_swap\n");
+    LOG("write Virt Page b in fifo_check_swap\n");
     *(unsigned char *)0x2000 = 0x0b;
     assert(pgfault_num==7);
-    log("write Virt Page c in fifo_check_swap\n");
+    LOG("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *)0x3000 = 0x0c;
     assert(pgfault_num==8);
-    log("write Virt Page d in fifo_check_swap\n");
+    LOG("write Virt Page d in fifo_check_swap\n");
     *(unsigned char *)0x4000 = 0x0d;
     assert(pgfault_num==9);
-    log("write Virt Page e in fifo_check_swap\n");
+    LOG("write Virt Page e in fifo_check_swap\n");
     *(unsigned char *)0x5000 = 0x0e;
     assert(pgfault_num==10);
-    log("write Virt Page a in fifo_check_swap\n");
+    LOG("write Virt Page a in fifo_check_swap\n");
     assert(*(unsigned char *)0x1000 == 0x0a);
     *(unsigned char *)0x1000 = 0x0a;
     assert(pgfault_num==11);

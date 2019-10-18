@@ -420,6 +420,7 @@ cons_init(void) {
     if (!serial_exists) {
         cprintf("serial port does not exist!!\n");
     }
+    LOG("控制台输出初始化完毕,获得输出调试信息能力");
 }
 
 /* cons_putc - print a single character @c to console devices */

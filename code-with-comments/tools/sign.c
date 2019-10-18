@@ -44,7 +44,7 @@ main(int argc, char *argv[]) {
         return -1;
     }
     fclose(ofp);
-    printf("\n----------512 字节 boot sector: '%s' 构建成功!----------b\n\n", argv[2]);
+    printf("\n----------512 字节 boot sector: '%s' 构建成功!----------\n\n", argv[2]);
     return 0;
 }
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <console.h>
 #include <kdebug.h>
+#include <kmonitor.h>
 #include <picirq.h>
 #include <trap.h>
 #include <clock.h>
@@ -16,7 +17,6 @@
 
 int kern_init(void) __attribute__((noreturn));
 
-static void lab1_switch_test(void);
 
 /**
  * 内核总控函数,依次初始化:
@@ -37,12 +37,10 @@ kern_init(void) {
 
     cons_init();                // init the console
 
-    logline("控制台输出初始化完毕,获得输出调试信息能力");
-    logline(__FILE__);
 
     print_kerninfo();
 
-    grade_backtrace();
+    //grade_backtrace();
 
     pmm_init();                 // init physical memory management
 
@@ -59,10 +57,6 @@ kern_init(void) {
     
     clock_init();               // init clock interrupt
     intr_enable();              // enable irq interrupt
-
-    //LAB1: CAHLLENGE 1 If you try to do it, uncomment lab1_switch_test()
-    // user/kernel mode switch test
-    //lab1_switch_test();
     
     cpu_idle();                 // run idle process
 }
@@ -97,32 +91,10 @@ lab1_print_cur_status(void) {
             "mov %%es, %2;"
             "mov %%ss, %3;"
             : "=m"(reg1), "=m"(reg2), "=m"(reg3), "=m"(reg4));
-    log("%d: @ring %d\n", round, reg1 & 3);
-    log("%d:  cs = %x\n", round, reg1);
-    log("%d:  ds = %x\n", round, reg2);
-    log("%d:  es = %x\n", round, reg3);
-    log("%d:  ss = %x\n", round, reg4);
+    LOG("%d: @ring %d\n", round, reg1 & 3);
+    LOG("%d:  cs = %x\n", round, reg1);
+    LOG("%d:  ds = %x\n", round, reg2);
+    LOG("%d:  es = %x\n", round, reg3);
+    LOG("%d:  ss = %x\n", round, reg4);
     round ++;
 }
-
-static void
-lab1_switch_to_user(void) {
-    //LAB1 CHALLENGE 1 : TODO
-}
-
-static void
-lab1_switch_to_kernel(void) {
-    //LAB1 CHALLENGE 1 :  TODO
-}
-
-static void
-lab1_switch_test(void) {
-    lab1_print_cur_status();
-    log("+++ switch to  user  mode +++\n");
-    lab1_switch_to_user();
-    lab1_print_cur_status();
-    log("+++ switch to kernel mode +++\n");
-    lab1_switch_to_kernel();
-    lab1_print_cur_status();
-}
-

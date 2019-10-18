@@ -187,19 +187,19 @@ static void slob_free(void *block, int size)
 
 
 void check_slab(void) {
-  log("check_slab() success\n");
+  LOG("check_slab() success\n");
 }
 
 void
 slab_init(void) {
-  log("use SLOB allocator\n");
+  LOG("use SLOB allocator\n");
   check_slab();
 }
 
 inline void 
 kmalloc_init(void) {
     slab_init();
-    log("kmalloc_init() succeeded!\n");
+    LOG("kmalloc_init() succeeded!\n");
 }
 
 size_t

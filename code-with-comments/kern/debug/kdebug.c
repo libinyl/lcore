@@ -17,9 +17,7 @@
 #define M_SIZE (K_SIZE * K_SIZE)
 
 #define LOG_KER_SYM_INFO(prefix, sym_name)\
-    log("\t"prefix": \t\t0X%08X = %u M + %uK\n",KER_TEXT_START, KERNBASE/M_SIZE, (sym_name - KERNBASE)/K_SIZE)
-
-
+    LOG("\t%-20s: \t0x%08x = %u M + %uK\n", prefix, sym_name, KERNBASE/M_SIZE, ((unsigned int)sym_name - KERNBASE)/K_SIZE)
 
 
 extern const struct stab __STAB_BEGIN__[];  // beginning of stabs table
@@ -274,21 +272,22 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
 void
 print_kerninfo(void) {
 
-    logline("内核设计规格:");
     extern char etext[], edata[], end[], kern_init[];
-    LOG_KER_SYM_INFO("text start", KER_TEXT_START);
-    log("   text start:\t\t0x%08x = %u M + %uK\n", KER_TEXT_START, KERNBASE / M_SIZE, (KER_TEXT_START - KERNBASE)/M_SIZE);
-    log("   entry\t\t0x%08x = %u M + %uK\n", kern_init, KERNBASE/M_SIZE/M_SIZE, ((unsigned int)kern_init - KERNBASE) /M_SIZE/1024);
-    log("   etext\t\t0x%08x = %u M + %uK\n", etext, (unsigned int)etext/1024/1024);
-    log("   edata\t\t0x%08x = %u M + %uK\n", edata, (unsigned int)edata/1024/1024);
-    log("   end(.bss 结束))\t0x%08x = %u M + %uK\n", end, (unsigned int)end/1024/1024);
-    log("   内核文件预计占用最大内存:\t4MB\n");
-    log("   内核文件实际占用内存:\t%d KB\n", (end - kern_init + 1023)/1024);
-    log("   内核可管理物理内存大小上限:\t0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);
-    log("   内核虚拟地址区间(B):\t\t[0x%08lx , 0x%08lx)\n",KERNBASE, KERNBASE + KMEMSIZE);
-    log("   内核虚拟地址区间(M):\t\t[%u M, %u M)\n", KERNBASE/1024/1024, (KERNBASE + KMEMSIZE)/1024/1024);
 
-    log("   内存分页大小 :\t\t%d B\n\n", PGSIZE);
+    logline("内核设计规格");
+
+    LOG_KER_SYM_INFO("text start", KER_TEXT_START);
+    LOG_KER_SYM_INFO("entry", kern_init);
+    LOG_KER_SYM_INFO("etext", etext);
+    LOG_KER_SYM_INFO("edata", edata);
+    LOG_KER_SYM_INFO("end(.bss 结束))", end);
+
+    LOG("\t%s\t:\t%uMB\n","内核文件预计占用最大内存",4);
+    LOG("\t%s\t\t:\t%d KB\n", "内核文件实际占用内存", (end - kern_init + 1023)/1024);
+    LOG("\t%s\t:\t0x%08lx Byte = %d MB\n", "内核可管理物理内存大小上限", KMEMSIZE, KMEMSIZE/M_SIZE);
+    LOG("\t%s\t\t:\t[0x%08lx , 0x%08lx)\n", "内核虚拟地址区间(B)", KERNBASE, KERNBASE + KMEMSIZE);
+    LOG("\t%s\t\t:\t[%u M, %u M)\n", "内核虚拟地址区间(M)", KERNBASE/M_SIZE, (KERNBASE + KMEMSIZE)/M_SIZE);
+    LOG("\t内存分页大小\t\t\t:\t%d B\n\n", PGSIZE);
 }
 
 /* *
