@@ -252,7 +252,7 @@ vfs_mount(const char *devname, int (*mountfunc)(struct device *dev, struct fs **
     struct device *dev = vop_info(vdev->devnode, device);
     if ((ret = mountfunc(dev, &(vdev->fs))) == 0) {
         assert(vdev->fs != NULL);
-        cprintf("vfs: mount %s.\n", vdev->devname);
+        log("vfs: mount %s.\n", vdev->devname);
     }
 
 out:
@@ -283,7 +283,7 @@ vfs_unmount(const char *devname) {
     }
     if ((ret = fsop_unmount(vdev->fs)) == 0) {
         vdev->fs = NULL;
-        cprintf("vfs: unmount %s.\n", vdev->devname);
+        log("vfs: unmount %s.\n", vdev->devname);
     }
 
 out:
@@ -305,15 +305,15 @@ vfs_unmount_all(void) {
                 if (vdev->mountable && vdev->fs != NULL) {
                     int ret;
                     if ((ret = fsop_sync(vdev->fs)) != 0) {
-                        cprintf("vfs: warning: sync failed for %s: %e.\n", vdev->devname, ret);
+                        log("vfs: warning: sync failed for %s: %e.\n", vdev->devname, ret);
                         continue ;
                     }
                     if ((ret = fsop_unmount(vdev->fs)) != 0) {
-                        cprintf("vfs: warning: unmount failed for %s: %e.\n", vdev->devname, ret);
+                        log("vfs: warning: unmount failed for %s: %e.\n", vdev->devname, ret);
                         continue ;
                     }
                     vdev->fs = NULL;
-                    cprintf("vfs: unmount %s.\n", vdev->devname);
+                    log("vfs: unmount %s.\n", vdev->devname);
                 }
             }
         }

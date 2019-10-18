@@ -21,9 +21,9 @@
 #define LOG_INT_INFO 0
 
 static void print_ticks() {
-    cprintf("%d ticks\n",TICK_NUM);
+    log("%d ticks\n",TICK_NUM);
 #ifdef DEBUG_GRADE
-    cprintf("End of Test.\n");
+    log("End of Test.\n");
     panic("EOT: kernel seems ok.");
 #endif
 }
@@ -123,42 +123,42 @@ static const char *IA32flags[] = {
 
 void
 print_trapframe(struct trapframe *tf) {
-    cprintf("trapframe at %p\n", tf);
+    log("trapframe at %p\n", tf);
     print_regs(&tf->tf_regs);
-    cprintf("  ds   0x----%04x\n", tf->tf_ds);
-    cprintf("  es   0x----%04x\n", tf->tf_es);
-    cprintf("  fs   0x----%04x\n", tf->tf_fs);
-    cprintf("  gs   0x----%04x\n", tf->tf_gs);
-    cprintf("  trap 0x%08x %s\n", tf->tf_trapno, trapname(tf->tf_trapno));
-    cprintf("  err  0x%08x\n", tf->tf_err);
-    cprintf("  eip  0x%08x\n", tf->tf_eip);
-    cprintf("  cs   0x----%04x\n", tf->tf_cs);
-    cprintf("  flag 0x%08x ", tf->tf_eflags);
+    log("  ds   0x----%04x\n", tf->tf_ds);
+    log("  es   0x----%04x\n", tf->tf_es);
+    log("  fs   0x----%04x\n", tf->tf_fs);
+    log("  gs   0x----%04x\n", tf->tf_gs);
+    log("  trap 0x%08x %s\n", tf->tf_trapno, trapname(tf->tf_trapno));
+    log("  err  0x%08x\n", tf->tf_err);
+    log("  eip  0x%08x\n", tf->tf_eip);
+    log("  cs   0x----%04x\n", tf->tf_cs);
+    log("  flag 0x%08x ", tf->tf_eflags);
 
     int i, j;
     for (i = 0, j = 1; i < sizeof(IA32flags) / sizeof(IA32flags[0]); i ++, j <<= 1) {
         if ((tf->tf_eflags & j) && IA32flags[i] != NULL) {
-            cprintf("%s,", IA32flags[i]);
+            log("%s,", IA32flags[i]);
         }
     }
-    cprintf("IOPL=%d\n", (tf->tf_eflags & FL_IOPL_MASK) >> 12);
+    log("IOPL=%d\n", (tf->tf_eflags & FL_IOPL_MASK) >> 12);
 
     if (!trap_in_kernel(tf)) {
-        cprintf("  esp  0x%08x\n", tf->tf_esp);
-        cprintf("  ss   0x----%04x\n", tf->tf_ss);
+        log("  esp  0x%08x\n", tf->tf_esp);
+        log("  ss   0x----%04x\n", tf->tf_ss);
     }
 }
 
 void
 print_regs(struct pushregs *regs) {
-    cprintf("  edi  0x%08x\n", regs->reg_edi);
-    cprintf("  esi  0x%08x\n", regs->reg_esi);
-    cprintf("  ebp  0x%08x\n", regs->reg_ebp);
-    cprintf("  oesp 0x%08x\n", regs->reg_oesp);
-    cprintf("  ebx  0x%08x\n", regs->reg_ebx);
-    cprintf("  edx  0x%08x\n", regs->reg_edx);
-    cprintf("  ecx  0x%08x\n", regs->reg_ecx);
-    cprintf("  eax  0x%08x\n", regs->reg_eax);
+    log("  edi  0x%08x\n", regs->reg_edi);
+    log("  esi  0x%08x\n", regs->reg_esi);
+    log("  ebp  0x%08x\n", regs->reg_ebp);
+    log("  oesp 0x%08x\n", regs->reg_oesp);
+    log("  ebx  0x%08x\n", regs->reg_ebx);
+    log("  edx  0x%08x\n", regs->reg_edx);
+    log("  ecx  0x%08x\n", regs->reg_ecx);
+    log("  eax  0x%08x\n", regs->reg_eax);
 }
 
 static inline void
@@ -229,7 +229,7 @@ trap_dispatch(struct trapframe *tf) {
                 if (trap_in_kernel(tf)) {
                     panic("handle pgfault failed in kernel mode. ret=%d\n", ret);
                 }
-                cprintf("killed by kernel.\n");
+                log("killed by kernel.\n");
                 panic("handle user mode pgfault failed. ret=%d\n", ret); 
                 do_exit(-E_KILLED);
             }
@@ -255,7 +255,7 @@ trap_dispatch(struct trapframe *tf) {
         ticks ++;
         assert(current != NULL);
         // if(ticks%(100)==0){
-        //     cprintf("触发了秒级时钟中断.\n");
+        //     log("触发了秒级时钟中断.\n");
         //     //调试 hack: 降低系统的进程切换时间
         //     // ticks 每次增加时过去了 10 毫秒,那么是 100 的倍数时经过 1 秒
         //     // n秒即是 100*n
@@ -264,11 +264,11 @@ trap_dispatch(struct trapframe *tf) {
         break;
     case IRQ_OFFSET + IRQ_COM1:
         //c = cons_getc();
-        //cprintf("serial [%03d] %c\n", c, c);
+        //log("serial [%03d] %c\n", c, c);
         //break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
-        //cprintf("kbd [%03d] %c\n", c, c);
+        //log("kbd [%03d] %c\n", c, c);
         {
           extern void dev_stdin_write(char c);
           dev_stdin_write(c);
@@ -286,7 +286,7 @@ trap_dispatch(struct trapframe *tf) {
     default:
         print_trapframe(tf);
         if (current != NULL) {
-            cprintf("unhandled trap.\n");
+            log("unhandled trap.\n");
             do_exit(-E_KILLED);
         }
         // in kernel, it must be a mistake

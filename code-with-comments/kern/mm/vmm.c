@@ -270,7 +270,7 @@ check_vmm(void) {
     check_vma_struct();
     check_pgfault();
 
-    cprintf("check_vmm() succeeded.\n");
+    log("check_vmm() succeeded.\n");
 }
 
 // https://chyyuu.gitbooks.io/ucore_os_docs/content/lab3/lab3_5_2_page_swapping_principles.html
@@ -329,7 +329,7 @@ check_vma_struct(void) {
     for (i =4; i>=0; i--) {
         struct vma_struct *vma_below_5= find_vma(mm,i);
         if (vma_below_5 != NULL ) {
-           cprintf("vma_below_5: i %x, start %x, end %x\n",i, vma_below_5->vm_start, vma_below_5->vm_end); 
+           log("vma_below_5: i %x, start %x, end %x\n",i, vma_below_5->vm_start, vma_below_5->vm_end); 
         }
         assert(vma_below_5 == NULL);
     }
@@ -338,7 +338,7 @@ check_vma_struct(void) {
 
   //  assert(nr_free_pages_store == nr_free_pages());
 
-    cprintf("check_vma_struct() succeeded!\n");
+    log("check_vma_struct() succeeded!\n");
 }
 
 struct mm_struct *check_mm_struct;  // 当前ucore 认为的合法虚拟内存空间集合
@@ -438,7 +438,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     pgfault_num++;
     // 若未找到 vma,或找到的 vma 的起始地址不正常(大于 addr),则不合法
     if (vma == NULL || vma->vm_start > addr) {
-        cprintf("not valid addr %x, and  can not find it in vma\n", addr);
+        log("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
     // 考察错误码,即 page fault 分类
@@ -449,17 +449,17 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     case 2: 
         /* 错误码: 写入缺页地址 : (W/R=1, P=0) */
         if (!(vma->vm_flags & VM_WRITE)) {// 属性校验结果异常
-            cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
+            log("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
             goto failed;
         }
         break;
     case 1: /* 错误码: 读取存在的地址 : (W/R=0, P=1): read, present */
         // 读取已存在页不应该出现错误码
-        cprintf("do_pgfault failed: error code flag = read AND present\n");
+        log("do_pgfault failed: error code flag = read AND present\n");
         goto failed;
     case 0: /* 错误码:读取缺页地址 (W/R=0, P=0): read, not present */
         if (!(vma->vm_flags & (VM_READ | VM_EXEC))) {// 属性校验结果异常
-            cprintf("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
+            log("do_pgfault failed: error code flag = read AND not present, but the addr's vma cannot read or exec\n");
             goto failed;
         }
     }
@@ -530,7 +530,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
                                     //(4) [NOTICE]: you myabe need to update your lab3's implementation for LAB5's normal execution.
         }
         else {
-            cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
+            log("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
         }
    }
@@ -538,19 +538,19 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     // 1. 加载地址 addr 在所属 mm 中对应的的二级页表项,不存在则创建
     log("开始恢复缺页异常\n");
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
-        cprintf("get_pte in do_pgfault failed\n");
+        log("get_pte in do_pgfault failed\n");
         goto failed;
     }
     log("已得到此地址的页表项\n");
     if (*ptep == 0) { // 1. 若页表项中物理地址的值为空,则分配一个物理页并将 addr 映射过去
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
-            cprintf("pgdir_alloc_page in do_pgfault failed\n");
+            log("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;
         }
     }
     else {
         struct Page *page=NULL;
-        cprintf("do pgfault: ptep %x, pte %x\n",ptep, *ptep);
+        log("do pgfault: ptep %x, pte %x\n",ptep, *ptep);
         if (*ptep & PTE_P) {
             //if process write to this existed readonly page (PTE_P means existed), then should be here now.
             //we can implement the delayed memory space copy for fork child process (AKA copy on write, COW).
@@ -562,13 +562,13 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
            // and call page_insert to map the phy addr with logical addr
            if(swap_init_ok) {               
                if ((ret = swap_in(mm, addr, &page)) != 0) {
-                   cprintf("swap_in in do_pgfault failed\n");
+                   log("swap_in in do_pgfault failed\n");
                    goto failed;
                }    
 
            }  
            else {
-            cprintf("no swap_init_ok but ptep is %x, failed\n",*ptep);
+            log("no swap_init_ok but ptep is %x, failed\n",*ptep);
             goto failed;
            }
        } 

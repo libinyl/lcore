@@ -41,7 +41,7 @@ unlock_files(struct files_struct *filesp) {
  */ 
 struct files_struct *
 files_create(void) {
-    //cprintf("[files_create]\n");
+    //log("[files_create]\n");
     static_assert((int)FILES_STRUCT_NENTRY > 128);
     struct files_struct *filesp;
     // 1. 分配两块内存用于存储文件结构体+fd 数组.内存大小为一整页.
@@ -59,7 +59,7 @@ files_create(void) {
 //Called when a proc exit
 void
 files_destroy(struct files_struct *filesp) {
-//    cprintf("[files_destroy]\n");
+//    log("[files_destroy]\n");
     assert(filesp != NULL && files_count(filesp) == 0);
     if (filesp->pwd != NULL) {
         vop_ref_dec(filesp->pwd);
@@ -77,7 +77,7 @@ files_destroy(struct files_struct *filesp) {
 
 void
 files_closeall(struct files_struct *filesp) {
-//    cprintf("[files_closeall]\n");
+//    log("[files_closeall]\n");
     assert(filesp != NULL && files_count(filesp) > 0);
     int i;
     struct file *file = filesp->fd_array;
@@ -91,7 +91,7 @@ files_closeall(struct files_struct *filesp) {
 
 int
 dup_fs(struct files_struct *to, struct files_struct *from) {
-//    cprintf("[dup_fs]\n");
+//    log("[dup_fs]\n");
     assert(to != NULL && from != NULL);
     assert(files_count(to) == 0 && files_count(from) > 0);
     if ((to->pwd = from->pwd) != NULL) {

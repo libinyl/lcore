@@ -172,9 +172,9 @@ monitor_t mt, *mtp=&mt;                          // monitor
 void phi_test_condvar (i) { 
     if(state_condvar[i]==HUNGRY&&state_condvar[LEFT]!=EATING
             &&state_condvar[RIGHT]!=EATING) {
-        cprintf("phi_test_condvar: state_condvar[%d] will eating\n",i);
+        log("phi_test_condvar: state_condvar[%d] will eating\n",i);
         state_condvar[i] = EATING ;
-        cprintf("phi_test_condvar: signal self_cv[%d] \n",i);
+        log("phi_test_condvar: signal self_cv[%d] \n",i);
         cond_signal(&mtp->cv[i]) ;
     }
 }
@@ -191,7 +191,7 @@ void phi_take_forks_condvar(int i) {
       // try to get fork
       phi_test_condvar(i); 
       if (state_condvar[i] != EATING) {
-          cprintf("phi_take_forks_condvar: %d didn't get fork and will wait\n",i);
+          log("phi_take_forks_condvar: %d didn't get fork and will wait\n",i);
           cond_wait(&mtp->cv[i]);
       }
 //--------leave routine in monitor--------------
@@ -225,19 +225,19 @@ int philosopher_using_condvar(void * arg) { /* arg is the No. of philosopher 0~N
   
     int i, iter=0;
     i=(int)arg;
-    cprintf("I am No.%d philosopher_condvar\n",i);
+    log("I am No.%d philosopher_condvar\n",i);
     while(iter++<TIMES)
     { /* iterate*/
-        cprintf("Iter %d, No.%d philosopher_condvar is thinking\n",iter,i); /* thinking*/
+        log("Iter %d, No.%d philosopher_condvar is thinking\n",iter,i); /* thinking*/
         do_sleep(SLEEP_TIME);
         phi_take_forks_condvar(i); 
         /* need two forks, maybe blocked */
-        cprintf("Iter %d, No.%d philosopher_condvar is eating\n",iter,i); /* eating*/
+        log("Iter %d, No.%d philosopher_condvar is eating\n",iter,i); /* eating*/
         do_sleep(SLEEP_TIME);
         phi_put_forks_condvar(i); 
         /* return two forks back*/
     }
-    cprintf("No.%d philosopher_condvar quit\n",i);
+    log("No.%d philosopher_condvar quit\n",i);
     return 0;    
 }
 

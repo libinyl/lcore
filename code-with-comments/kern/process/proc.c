@@ -1114,7 +1114,7 @@ kernel_execve(const char *name, const char **argv) {
 
 #define __KERNEL_EXECVE(name, path, ...) ({                         \
 const char *argv[] = {path, ##__VA_ARGS__, NULL};       \
-                     cprintf("kernel_execve: pid = %d, name = \"%s\".\n",    \
+                     log("kernel_execve: pid = %d, name = \"%s\".\n",    \
                              current->pid, name);                            \
                      kernel_execve(name, argv);                              \
 })
@@ -1167,14 +1167,14 @@ init_main(void *arg) {
 
     fs_cleanup();
         
-    cprintf("all user-mode processes have quit.\n");
+    log("all user-mode processes have quit.\n");
     assert(initproc->cptr == NULL && initproc->yptr == NULL && initproc->optr == NULL);
     assert(nr_process == 2);
     assert(list_next(&proc_list) == &(initproc->list_link));
     assert(list_prev(&proc_list) == &(initproc->list_link));
     assert(nr_free_pages_store == nr_free_pages());
     assert(kernel_allocated_store == kallocated());
-    cprintf("init check memory pass.\n");
+    log("init check memory pass.\n");
     return 0;
 }
 

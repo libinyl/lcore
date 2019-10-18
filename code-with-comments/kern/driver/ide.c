@@ -170,7 +170,7 @@ ide_init(void) {
             model[i] = '\0';
         } while (i -- > 0 && model[i] == ' ');
 
-        cprintf("ide %d: %10u(sectors), '%s'.\n", ideno, ide_devices[ideno].size, ide_devices[ideno].model);
+        log("ide %d: %10u(sectors), '%s'.\n", ideno, ide_devices[ideno].size, ide_devices[ideno].model);
     }
 
     // enable ide interrupt

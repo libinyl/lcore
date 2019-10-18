@@ -97,11 +97,11 @@ lab1_print_cur_status(void) {
             "mov %%es, %2;"
             "mov %%ss, %3;"
             : "=m"(reg1), "=m"(reg2), "=m"(reg3), "=m"(reg4));
-    cprintf("%d: @ring %d\n", round, reg1 & 3);
-    cprintf("%d:  cs = %x\n", round, reg1);
-    cprintf("%d:  ds = %x\n", round, reg2);
-    cprintf("%d:  es = %x\n", round, reg3);
-    cprintf("%d:  ss = %x\n", round, reg4);
+    log("%d: @ring %d\n", round, reg1 & 3);
+    log("%d:  cs = %x\n", round, reg1);
+    log("%d:  ds = %x\n", round, reg2);
+    log("%d:  es = %x\n", round, reg3);
+    log("%d:  ss = %x\n", round, reg4);
     round ++;
 }
 
@@ -118,10 +118,10 @@ lab1_switch_to_kernel(void) {
 static void
 lab1_switch_test(void) {
     lab1_print_cur_status();
-    cprintf("+++ switch to  user  mode +++\n");
+    log("+++ switch to  user  mode +++\n");
     lab1_switch_to_user();
     lab1_print_cur_status();
-    cprintf("+++ switch to kernel mode +++\n");
+    log("+++ switch to kernel mode +++\n");
     lab1_switch_to_kernel();
     lab1_print_cur_status();
 }
