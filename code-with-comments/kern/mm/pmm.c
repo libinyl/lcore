@@ -43,10 +43,11 @@ struct Page *pages;
 // 需要管理的物理内存页数
 size_t npage = 0;
 
-// virtual address of boot-time page directory
+// boot-time 一级页表的虚拟地址
 extern pde_t __boot_pgdir;
 pde_t *boot_pgdir = &__boot_pgdir;
-// physical address of boot-time page directory
+
+// boot-time 一级页表的物理地址
 uintptr_t boot_cr3;
 
 // physical memory management
@@ -371,7 +372,7 @@ void
 pmm_init(void) {
     logline("初始化开始:内存管理模块");
     log("目标: 根据实际内存情况,建立起虚拟内存机制.\n");
-    log("      kern_entry 最后仅配置了内核区域的虚拟地址映射,现在要建立完整的映射.\n");
+    log("      kern_entry 最后仅配置了内核区域实际代码 4MB 的虚拟地址映射,现在要建立可管理空间内完整的映射,.\n");
 
     // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量boot_cr3 即内核一级页表基址.
     boot_cr3 = PADDR(boot_pgdir);
@@ -413,6 +414,7 @@ pmm_init(void) {
     print_pgdir();
     
     kmalloc_init();
+    //print_bootPD();
     logline("初始化完毕:内存管理模块");
 }
 
@@ -856,6 +858,13 @@ print_pgdir(void) {
     log("--- 当前页表信息:end ---\n");
 }
 
+void
+print_bootPD(void) {
+    log("boot time 一级页表内容,即二级页表物理基址表:\n");
+    for(size_t i = 0; i< PGSIZE; i+= sizeof(uintptr_t)){
+        log("   0x%08lx\n",boot_pgdir + i);
+    }
+}
 
 /**
  * 关于内存映射的一些计算:

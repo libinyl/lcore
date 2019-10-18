@@ -115,19 +115,19 @@ int philosopher_using_semaphore(void * arg) /* i：哲学家号码，从0到N-1 
 {
     int i, iter=0;
     i=(int)arg;
-    cprintf("I am No.%d philosopher_sema\n",i);
+    log("I am No.%d philosopher_sema\n",i);
     while(iter++<TIMES)
     { /* 无限循环 */
-        cprintf("Iter %d, No.%d philosopher_sema is thinking\n",iter,i); /* 哲学家正在思考 */
+        log("Iter %d, No.%d philosopher_sema is thinking\n",iter,i); /* 哲学家正在思考 */
         do_sleep(SLEEP_TIME);
         phi_take_forks_sema(i); 
         /* 需要两只叉子，或者阻塞 */
-        cprintf("Iter %d, No.%d philosopher_sema is eating\n",iter,i); /* 进餐 */
+        log("Iter %d, No.%d philosopher_sema is eating\n",iter,i); /* 进餐 */
         do_sleep(SLEEP_TIME);
         phi_put_forks_sema(i); 
         /* 把两把叉子同时放回桌子 */
     }
-    cprintf("No.%d philosopher_sema quit\n",i);
+    log("No.%d philosopher_sema quit\n",i);
     return 0;    
 }
 

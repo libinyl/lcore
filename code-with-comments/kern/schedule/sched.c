@@ -53,21 +53,26 @@ static struct run_queue __rq;
  */ 
 void
 sched_init(void) {
+    logline("初始化开始:进程调度器");
+
     list_init(&timer_list);
 
     sched_class = &default_sched_class;
 
     rq = &__rq;
     rq->max_time_slice = 5;
+    log("运行队列初始时间片被设置为%u\n", rq->max_time_slice);
     sched_class->init(rq);
 
     cprintf("sched class: %s\n", sched_class->name);
+    logline("初始化完毕:进程调度器");
+
 }
 
 /**
  * 唤醒进程: 把一个进程状态更新为已就绪,添加到就绪队列
  * 
- * 顾名思义,wakeup,应当是把一个处于等待状态的进程唤醒加入就绪队列
+ * 顾名思义,wakeup,应当是把一个处于非 RUNNABLE(当然也不能是 ZOMBIE) 状态的进程唤醒并交给调度器加入到就绪队列.
  * 
  * 场景:
  *  - run_timer_list
@@ -180,7 +185,9 @@ del_timer(timer_t *timer) {
  */ 
 void
 run_timer_list(void) {
+    log("run_timer_list:\n");
     bool intr_flag;
+
     local_intr_save(intr_flag);
     {
         list_entry_t *le = list_next(&timer_list);

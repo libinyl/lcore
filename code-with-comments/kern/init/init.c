@@ -38,10 +38,11 @@ kern_init(void) {
     cons_init();                // init the console
 
     logline("控制台输出初始化完毕,获得输出调试信息能力");
+    logline(__FILE__);
 
     print_kerninfo();
 
-    //grade_backtrace();
+    grade_backtrace();
 
     pmm_init();                 // init physical memory management
 

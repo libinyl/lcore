@@ -2,9 +2,34 @@
 #include <stdio.h>
 #include <console.h>
 #include <unistd.h>
+#include <string.h>
 /* HIGH level console I/O */
 
-#define LOG_ON 1
+#define LOG_ALL_ON 0    // 日志总开关
+#define LOG_PMM_ON 1    // pmm 模块开关
+#define LOG_VMM_ON 1    // vmm 模块开关
+
+#define __MODULE_INIT_  "kern/mm/init.c"
+#define __MODULE_PMM_   "kern/mm/pmm.c"
+#define __MODULE_VMM_   "kern/mm/vmm.c"
+
+
+// #define LOG_CHECK()\
+//     ({\
+//         if(!LOG_ALL_ON) {0;}\
+//         if(!strcmp(__FILE__, __MODULE_PMM_) && LOG_PMM_ON){\
+//             1;
+//         }\
+//     })
+
+int
+log_check(){
+    if(!LOG_ALL_ON) return 0;
+    if(!strcmp(__FILE__, __MODULE_INIT_) && LOG_PMM_ON) return 1;
+    if(!strcmp(__FILE__, __MODULE_PMM_) && LOG_PMM_ON) return 1;
+    if(!strcmp(__FILE__, __MODULE_VMM_) && LOG_VMM_ON) return 1;
+    return 1;
+}
 
 /* *
  * cputch - writes a single character @c to stdout, and it will
@@ -80,7 +105,7 @@ getchar(void) {
 
 int
 log(const char *fmt, ...) {
-    if(!LOG_ON) 
+    if(!log_check())
         return;
     va_list ap;
     int cnt;

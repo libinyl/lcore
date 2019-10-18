@@ -18,6 +18,7 @@ toobj = $(addprefix $(OBJDIR)$(SLASH)$(if $(2),$(2)$(SLASH)),\
 # get .d dependency files: (#files[, packet])
 todep = $(patsubst %.o,%.d,$(call toobj,$(1),$(2)))
 
+# 加前缀. bin/$(1)
 totarget = $(addprefix $(BINDIR)$(SLASH),$(1))
 
 # change $(name) to $(OBJPREFIX)$(name): (#names)

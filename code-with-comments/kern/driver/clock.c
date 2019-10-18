@@ -48,6 +48,8 @@ long SYSTEM_READ_TIMER( void ){
  * */
 void
 clock_init(void) {
+    logline("初始化开始:时钟控制器");
+
     // set 8253 timer-chip
     outb(TIMER_MODE, TIMER_SEL0 | TIMER_RATEGEN | TIMER_16BIT);
     // 装入计数器初值
@@ -56,8 +58,7 @@ clock_init(void) {
 
     // initialize time counter 'ticks' to zero
     ticks = 0;
-
     pic_enable(IRQ_TIMER);
-    cprintf("timer 时钟中断初始化完毕.\n");
+    logline("初始化完毕:时钟控制器");
 }
 

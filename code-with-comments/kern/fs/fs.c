@@ -10,9 +10,13 @@
 //called when init_main proc start
 void
 fs_init(void) {
+    logline("初始化开始:文件系统");
+
     vfs_init();
     dev_init();
     sfs_init();
+
+    logline("初始化完毕:文件系统");
 }
 
 void

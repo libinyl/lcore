@@ -12,6 +12,15 @@
 #include <assert.h>
 
 #define STACKFRAME_DEPTH 20
+#define KER_TEXT_START 0xC0100000 // kernel.ld 中 text 段起始点
+#define K_SIZE (1 << 10)
+#define M_SIZE (K_SIZE * K_SIZE)
+
+#define LOG_KER_SYM_INFO(prefix, sym_name)\
+    log("\t"prefix": \t\t0X%08X = %u M + %uK\n",KER_TEXT_START, KERNBASE/M_SIZE, (sym_name - KERNBASE)/K_SIZE)
+
+
+
 
 extern const struct stab __STAB_BEGIN__[];  // beginning of stabs table
 extern const struct stab __STAB_END__[];    // end of stabs table
@@ -267,11 +276,12 @@ print_kerninfo(void) {
 
     logline("内核设计规格:");
     extern char etext[], edata[], end[], kern_init[];
-    log("   text start:\t\t0x%08x ≈ %d M\n", 0xC0100000, 0xC0100000/1024/1024);
-    log("   entry\t\t0x%08x ≈ %d M\n", kern_init, (unsigned int)kern_init/1024/1024);
-    log("   etext\t\t0x%08x ≈ %d M\n", etext, (unsigned int)etext/1024/1024);
-    log("   edata\t\t0x%08x ≈ %d M\n", edata, (unsigned int)edata/1024/1024);
-    log("   end(.bss 结束))\t0x%08x ≈ %d M\n\n", end, (unsigned int)end/1024/1024);
+    LOG_KER_SYM_INFO("text start", KER_TEXT_START);
+    log("   text start:\t\t0x%08x = %u M + %uK\n", KER_TEXT_START, KERNBASE / M_SIZE, (KER_TEXT_START - KERNBASE)/M_SIZE);
+    log("   entry\t\t0x%08x = %u M + %uK\n", kern_init, KERNBASE/M_SIZE/M_SIZE, ((unsigned int)kern_init - KERNBASE) /M_SIZE/1024);
+    log("   etext\t\t0x%08x = %u M + %uK\n", etext, (unsigned int)etext/1024/1024);
+    log("   edata\t\t0x%08x = %u M + %uK\n", edata, (unsigned int)edata/1024/1024);
+    log("   end(.bss 结束))\t0x%08x = %u M + %uK\n", end, (unsigned int)end/1024/1024);
     log("   内核文件预计占用最大内存:\t4MB\n");
     log("   内核文件实际占用内存:\t%d KB\n", (end - kern_init + 1023)/1024);
     log("   内核可管理物理内存大小上限:\t0x%08lx Byte(16) = %d MB\n", KMEMSIZE, KMEMSIZE/1024/1024);

@@ -8,12 +8,12 @@
 #include <skew_heap.h>
 
 
-// process's state in his life cycle
+// 进程生命周期中的状态
 enum proc_state {
-    PROC_UNINIT = 0,  // uninitialized
-    PROC_SLEEPING,    // sleeping
-    PROC_RUNNABLE,    // runnable(maybe running)
-    PROC_ZOMBIE,      // almost dead, and wait parent proc to reclaim his resource
+    PROC_UNINIT = 0,  // 尚未初始化             uninitialized
+    PROC_SLEEPING,    // 睡眠中,位于就绪队列      sleeping
+    PROC_RUNNABLE,    // 就绪,位于就绪队列,(也可能正在运行,不位于就绪队列)  runnable(maybe running)
+    PROC_ZOMBIE,      // 即将死亡,等待父进程回收资源                        almost dead, and wait parent proc to reclaim his resource
 };
 
 // Saved registers for kernel context switches.

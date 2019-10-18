@@ -35,7 +35,8 @@
         "syscall.h": "c",
         "ios": "c",
         "*.tcc": "c",
-        "elf.h": "c"
+        "elf.h": "c",
+        "error.h": "c"
     },
     "workbench.colorCustomizations": {
         "activityBar.background": "#ef7853",

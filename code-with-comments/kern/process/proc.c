@@ -480,6 +480,7 @@ put_fs(struct proc_struct *proc) {
  */ 
 int
 do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
+    log("do_fork:\n");
     int ret = -E_NO_FREE_PROC;
     struct proc_struct *proc;
     if (nr_process >= MAX_PROCESS) {
@@ -516,28 +517,37 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
 	*    update step 1: set child proc's parent to current process, make sure current process's wait_state is 0
 	*    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
     */
+   log("    1. 分配 PCB 完毕\n");
     if ((proc = alloc_proc()) == NULL) {
         goto fork_out;
     }
-    // 设置父进程为当前进程
+    // 设置新进程的父进程为当前进程
+    log("   2. 设置新进程的父进程是 current\n");
     proc->parent = current;
     assert(current->wait_state == 0);
     // 建立内核栈空间,并用proc->kstack维护,(指向栈底,低地址)
+    log("   3. 为新进程分配内核栈空间,用以维护陷入到内核的状态\n");
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
     // 设置文件系统数据结构
+    log("   4. 设置新进程的 file_struct 结构,从父进程选择性拷贝.\n");
     if (copy_fs(clone_flags, proc) != 0) { //for LAB8
         goto bad_fork_cleanup_kstack;
     }
     //复制父进程的内存结构
+    log("   4. 设置新进程的 mm_struct 结构,从父进程选择性拷贝.\n");
     if (copy_mm(clone_flags, proc) != 0) {
         goto bad_fork_cleanup_fs;
     }
     // 复制父进程的 trapframe 和 context
+    log("   5. 设置新进程的 trapframe 结构,从父进程选择性拷贝.\n");
+
     copy_thread(proc, stack, tf);
 
     // 添加到全局进程维护表中
+    log("   6. 将新进程维护到proc_list中.\n");
+
     bool intr_flag;
     local_intr_save(intr_flag);
     {
@@ -549,6 +559,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     local_intr_restore(intr_flag);
 
     // 把子进程更新进程状态为 RUNNABLE 并添加到就绪队列
+    log("   7. 唤醒新进程,进程创建结束.\n");
     wakeup_proc(proc);
 
     // 子进程不会执行至此
@@ -1174,6 +1185,9 @@ init_main(void *arg) {
  */
 void
 proc_init(void) {
+
+    logline("初始化开始:内核线程");
+
     int i;
     // 初始化进程表
     list_init(&proc_list);
@@ -1210,6 +1224,9 @@ proc_init(void) {
 
     assert(idleproc != NULL && idleproc->pid == 0);
     assert(initproc != NULL && initproc->pid == 1);
+
+    logline("初始化结束:内核线程");
+
 }
 
 // idle: 闲散的内核进程,不断地检测"当前进程"是否被指定暂时放弃资源.
@@ -1236,6 +1253,8 @@ lab6_set_priority(uint32_t priority)
 //          - then call scheduler. if process run again, delete timer first.
 int
 do_sleep(unsigned int time) {
+    log("do_sleep:\n");
+    log("当前进程信息:");
     if (time == 0) {
         return 0;
     }

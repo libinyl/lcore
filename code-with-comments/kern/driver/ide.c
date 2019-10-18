@@ -112,6 +112,8 @@ ide_wait_ready(unsigned short iobase, bool check_error) {
  */
 void
 ide_init(void) {
+    logline("初始化开始:ide 磁盘控制器");
+
     static_assert((SECTSIZE % 4) == 0);
     unsigned short ideno, iobase;
     for (ideno = 0; ideno < MAX_IDE; ideno ++) {
@@ -174,6 +176,8 @@ ide_init(void) {
     // enable ide interrupt
     pic_enable(IRQ_IDE1);
     pic_enable(IRQ_IDE2);
+    logline("初始化开始:ide 磁盘控制器");
+
 }
 
 bool

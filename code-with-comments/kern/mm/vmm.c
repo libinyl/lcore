@@ -479,13 +479,6 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     ret = -E_NO_MEM;
 
     pte_t *ptep=NULL;
-    /**
-     * 合法缺页异常的最终处理:
-     * 
-     * 
-     * 
-     * 
-     */ 
     /*
     * MACROs or Functions:
     *   get_pte : get an pte and return the kernel virtual address of this pte for la
