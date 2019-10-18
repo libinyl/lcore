@@ -115,8 +115,9 @@ default_init_memmap(struct Page *base, size_t n) {
     SetPageProperty(base);
     nr_free += n;
     list_add_before(&free_list, &(base->page_link));
-    LOG("   已将一块连续地址空间加入 freelist,起始: 0x%08lx, page 数:%d.\n", base, n);
-    LOG("   当前空闲 page 数:%d\n",nr_free);
+    LOG_TAB("\tdefault_init_memmap:\n");
+    LOG_TAB("\t\t已将一块连续地址空间加入 freelist,起始: 0x%08lx, page 数:%d.\n", base, n);
+    LOG_TAB("\t\t当前空闲 page 数:%d\n", nr_free);
 }
 
 static struct Page *
@@ -147,7 +148,7 @@ default_alloc_pages(size_t n) {
         ClearPageProperty(page);
     }
 
-    LOG("default_alloc_pages: 分配了一页内存\n");
+    //LOG("default_alloc_pages: 分配了一页内存\n");
 
     return page;
 }
@@ -251,7 +252,6 @@ basic_check(void) {
 
 static void
 default_check(void) {
-    LOG("   开始检查内存页分配与回收功能.\n");
     int count = 0, total = 0;
     list_entry_t *le = &free_list;
     while ((le = list_next(le)) != &free_list) {
@@ -311,6 +311,7 @@ default_check(void) {
     }
     assert(count == 0);
     assert(total == 0);
+    LOG_TAB("default_check(): succeed!\n");
 }
 
 const struct pmm_manager default_pmm_manager = {

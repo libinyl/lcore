@@ -25,6 +25,7 @@
 #define __MODULE_INIT_  "kern/init/init.c"
 #define __MODULE_DEBUG_  "kern/debug/kdebug.c"
 #define __MODULE_PMM_   "kern/mm/pmm.c"
+#define __MODULE_PMM_DEFAULT_   "kern/mm/default_pmm.c"
 #define __MODULE_VMM_   "kern/mm/vmm.c"
 #define __MODULE_COS_   "kern/driver/console.c"
 

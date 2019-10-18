@@ -37,7 +37,7 @@ kern_init(void) {
 
     cons_init();                // init the console
 
-
+    print_history();
     print_kerninfo();
 
     //grade_backtrace();

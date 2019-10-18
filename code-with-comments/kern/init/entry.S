@@ -17,7 +17,7 @@ kern_entry:
     #       1) 高地址映射:内核运行期地址, 起始于 KERNBASE.
     #       2) 低地址映射: 在 movl %eax, %cr0 之后还有几个指令需要执行,如果不映射的话就访问不到了.
 
-    # 两级页表已经由__boot_pgdir配置,现在将其物理地址赋给到 cr3
+    # 初始化内核环境的页表
     movl $REALLOC(__boot_pgdir), %eax
     movl %eax, %cr3
 
@@ -84,7 +84,7 @@ bootstacktop:
 .align PGSIZE
 __boot_pgdir:
 .globl __boot_pgdir
-    # 第一个一级页表项,把虚拟地址 0 ~ 4M 临时映射到 0 ~ 4M,
+    # 第一个一级页表项,把虚拟地址 0 ~ 4M 临时映射到 0 ~ 4M. 在跳到 kern_init 之前就已抹除.
     .long REALLOC(__boot_pt1) + (PTE_P | PTE_U | PTE_W)
     # 从 0 到KERNBASE,中间间隔了 KERNBASE/4M = 3072/4=768 项,共 768*4B = 3072Byte,不到一个 PAGESIZE.
     # 为何最后还要<<2 ?每个页表项占用 1 个long,是 32bit,从 byte 到 long 需要*4,即<<2

@@ -261,6 +261,26 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
     return 0;
 }
 
+void
+print_history(void) {
+    logline("历史过程");
+    LOG("CPU上电,BIOS 自检\n");
+    LOG("BIOS 从 #0 sector 把 bootloader 加载到 0x7c00 并执行\n\n");
+    LOG("bootloader:\n");
+    LOG_TAB("A20地址线打开\n");
+    LOG_TAB("探测物理内存分布\n");
+    LOG_TAB("初始化 boot-time GDT\n");
+    LOG_TAB("使能 32 bit 保护模式\n");
+    LOG_TAB("设置 C 语言环境, 栈相关指针\n");
+    LOG_TAB("bootmain 将 KERNEL 的 elf header 从第二块扇区加载到内存 64KB 处\n");
+    LOG_TAB("解析 elf header 信息, 将 kernel 完全加载\n");
+    LOG_TAB("控制权转移到 kernel entry\n\n");
+    LOG("kernel entry:\n");
+    LOG_TAB("设置内核环境的页表, 使能分页\n");
+    LOG_TAB("设置内核栈基址和栈指针\n");
+    LOG_TAB("控制权交给 kern_init\n");
+}
+
 /**
  * 打印内核信息.
  * - entry  内核入口
@@ -282,12 +302,12 @@ print_kerninfo(void) {
     LOG_KER_SYM_INFO("edata", edata);
     LOG_KER_SYM_INFO("end(.bss 结束))", end);
 
-    LOG("\t%s\t:\t%uMB\n","内核文件预计占用最大内存",4);
-    LOG("\t%s\t\t:\t%d KB\n", "内核文件实际占用内存", (end - kern_init + 1023)/1024);
-    LOG("\t%s\t:\t0x%08lx Byte = %d MB\n", "内核可管理物理内存大小上限", KMEMSIZE, KMEMSIZE/M_SIZE);
-    LOG("\t%s\t\t:\t[0x%08lx , 0x%08lx)\n", "内核虚拟地址区间(B)", KERNBASE, KERNBASE + KMEMSIZE);
-    LOG("\t%s\t\t:\t[%u M, %u M)\n", "内核虚拟地址区间(M)", KERNBASE/M_SIZE, (KERNBASE + KMEMSIZE)/M_SIZE);
-    LOG("\t内存分页大小\t\t\t:\t%d B\n\n", PGSIZE);
+    LOG_TAB("%s\t:\t%uMB\n","内核文件预计占用最大内存",4);
+    LOG_TAB("%s\t\t:\t%d KB\n", "内核文件实际占用内存", (end - kern_init + 1023)/1024);
+    LOG_TAB("%s\t:\t0x%08lx Byte = %d MB\n", "内核可管理物理内存大小上限", KMEMSIZE, KMEMSIZE/M_SIZE);
+    LOG_TAB("%s\t\t:\t[0x%08lx , 0x%08lx)\n", "内核虚拟地址区间(B)", KERNBASE, KERNBASE + KMEMSIZE);
+    LOG_TAB("%s\t\t:\t[%u M, %u M)\n", "内核虚拟地址区间(M)", KERNBASE/M_SIZE, (KERNBASE + KMEMSIZE)/M_SIZE);
+    LOG_TAB("内存分页大小\t\t\t:\t%d B\n\n", PGSIZE);
 }
 
 /* *

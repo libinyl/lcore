@@ -63,7 +63,7 @@ readsect(void *dst, uint32_t secno) {
 /* *
  * readseg - read @count bytes at @offset from kernel into virtual address @va,
  * might copy more than asked.
- * 从内核的offset处读取 count 个字节到虚拟地址 va.
+ * 从内核的offset处读取 count 个字节到虚拟地址 va. 扇区号=(offset / SECTSIZE) + 1. kenerl 位于 1 号.
  * 封装了对于 va 的处理
  * */
 static void
@@ -86,11 +86,9 @@ readseg(uintptr_t va, uint32_t count, uint32_t offset) {
     }
 }
 
-/* bootmain - bootloader 的入口 */
-/* 如何调试? b *0x7c00 */
 void
 bootmain(void) {
-    // 读取磁盘上4MB 的内容到 elf header 处就位
+    // 读取 1 号磁盘(即 kernel 位于的磁盘)上4KB=1PAGE 的内容到 elf header 处就位
     readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
 
     // is this a valid ELF?

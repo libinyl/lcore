@@ -82,7 +82,10 @@ int
 log_check(const char *filename){
     if(!LOG_MODULE_ALL_ON) return 0;
     if(!strcmp(filename, __MODULE_INIT_) && LOG_INIT_ON) return 1;
+    /* pmm begin */
     if(!strcmp(filename, __MODULE_PMM_) && LOG_PMM_ON) return 1;
+    if(!strcmp(filename, __MODULE_PMM_DEFAULT_) && LOG_PMM_ON) return 1;
+    /* pmm end */
     if(!strcmp(filename, __MODULE_VMM_) && LOG_VMM_ON) return 1;
     if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
     if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;

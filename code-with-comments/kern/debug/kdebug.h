@@ -4,6 +4,7 @@
 #include <defs.h>
 #include <trap.h>
 
+void print_history(void);
 void print_kerninfo(void);
 void print_stackframe(void);
 void print_debuginfo(uintptr_t eip);

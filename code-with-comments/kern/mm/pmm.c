@@ -252,17 +252,17 @@ page_init(void) {
     int i;
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t range_begin = memmap->map[i].addr, range_end = range_begin + memmap->map[i].size;
-        LOG("   区间[%d]:[%08llx, %08llx], 大小: 0x%08llx Byte, 类型: %d, ",
+        LOG_TAB("区间[%d]:[%08llx, %08llx], 大小: 0x%08llx Byte, 类型: %d, ",
                 i, range_begin, range_end - 1, memmap->map[i].size, memmap->map[i].type);
 
         if (memmap->map[i].type == E820_ARM) {  // E820_ARM,ARM=address range memory,可用内存,值=1
-            LOG("系可用内存.\n");
+            LOG_TAB("系可用内存.\n");
             if (maxpa < range_end && range_begin < KMEMSIZE) {
                 maxpa = range_end;
-                LOG("       调整已知物理空间最大值 maxpa 至 0x%08llx\n",maxpa);
+                LOG_TAB("\t调整已知物理空间最大值 maxpa 至 0x%08llx = %lld K = %lld M\n", maxpa, maxpa /1024, maxpa /1024/1024);
             }
         }else{
-            LOG("系不可用内存.\n");
+            LOG_TAB("系不可用内存.\n");
         }
     }
     if (maxpa > KMEMSIZE) { // 可管理物理空间上限不超过 KMEMSIZE=0x38000000
@@ -279,21 +279,21 @@ page_init(void) {
     }
     LOG("\n2) 物理内存维护表格 pages 初始化:\n     \n");
 
-    LOG("   实际管理物理内存大小 maxpa = 0x%08llx = %dM\n",maxpa,maxpa/1024/1024);
-    LOG("   需要管理的内存页数 npage = maxpa/PGSIZE = %d\n", npage);
-    LOG("   内核文件地址边界 end: 0x%08llx\n",end);
-    LOG("   表格起始地址 pages = ROUNDUP(end) = 0x%08lx = %d M\n", (uintptr_t)pages, (uintptr_t)pages/1024/1024);
-    LOG("   pages 表格自身内核虚拟地址区间 [pages,pages*n): [0x%08lx, 0x%08lx)B=[%d, %d)M,已被设置为不可交换.\n",pages,((uintptr_t)pages + sizeof(struct Page) * npage), (uintptr_t)pages/1024/1024, ((uintptr_t)pages + sizeof(struct Page) * npage)/1024/1024);
+    LOG_TAB("实际管理物理内存大小 maxpa = 0x%08llx = %dM\n",maxpa,maxpa/1024/1024);
+    LOG_TAB("需要管理的内存页数 npage = maxpa/PGSIZE = %d\n", npage);
+    LOG_TAB("内核文件地址边界 end: 0x%08llx\n",end);
+    LOG_TAB("表格起始地址 pages = ROUNDUP(end) = 0x%08lx = %d M\n", (uintptr_t)pages, (uintptr_t)pages/1024/1024);
+    LOG_TAB("pages 表格自身内核虚拟地址区间 [pages,pages*n): [0x%08lx, 0x%08lx)B,已被设置为不可交换.\n",pages,((uintptr_t)pages + sizeof(struct Page) * npage), (uintptr_t)pages/1024/1024, ((uintptr_t)pages + sizeof(struct Page) * npage)/1024/1024);
 
     uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * npage);
 
-    LOG("   pages 表格结束于物理地址 freemem :0x%08lxB = %dM. 也是后序可用内存的起始地址. \n\n",freemem, freemem/1024/1024);
-    LOG("   考察低于 freemem 管理的内存, 将空闲区域标记为可用.\n");
+    LOG_TAB("pages 表格结束于物理地址 freemem :0x%08lxB ≈ %dM. 也是后序可用内存的起始地址. \n\n",freemem, freemem/1024/1024);
+    LOG_TAB("考察管理区间, 将空闲区域标记为可用.\n");
 
 
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
-        LOG("   考察区间:[%08llx,%08llx).\n",begin,end);
+        LOG_TAB("考察区间: [%08llx,%08llx):\t",begin,end);
         if (memmap->map[i].type == E820_ARM) {
             if (begin < freemem) {
                 begin = freemem;
@@ -305,10 +305,14 @@ page_init(void) {
                 begin = ROUNDUP(begin, PGSIZE);
                 end = ROUNDDOWN(end, PGSIZE);
                 if (begin < end) {
-                    LOG("       此区域 page 起始地址为%08lx,page 数量为%d.\n",pa2page(begin),(end - begin) / PGSIZE);
+                    LOG_TAB("此区间可用, 大小为 0x%08llx B = %lld KB = %lld MB = %lld page.\n", (end - begin), (end - begin)/1024, (end - begin)/1024/1024, (end - begin)/PGSIZE);
                     init_memmap(pa2page(begin), (end - begin) / PGSIZE);
                 }
+            }else{
+                LOG_TAB("此区间不可用, 原因: 边界非法.\n");
             }
+        }else{
+            LOG_TAB("此区间不可用, 原因: BIOS 认定非可用内存.\n");
         }
     }
     logline("初始化完毕:分页式虚拟地址空间管理");
@@ -334,22 +338,21 @@ page_init(void) {
  */ 
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
-    logline("开始: 内核区域映射.");
-    LOG("   一级页表地址:0x%08lx\n",pgdir);
-    LOG("   区间[0x%08lx,0x%08lx + 0x%08lx ) -> [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
-    LOG("   其中 size=%u M\n",size/1024/1024);
+    LOG_TAB("一级页表地址:0x%08lx\n",pgdir);
+    LOG_TAB("区间[0x%08lx,0x%08lx + 0x%08lx ) -> [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
+    LOG_TAB("其中 size=%u M\n",size/1024/1024);
 
     assert(PGOFF(la) == PGOFF(pa));// 要映射的地址在 page 内的偏移量应当相同
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
-    LOG("   调整过的值: n: 0x%08lx, la: 0x%08lx, pa: 0x%08lx.\n", n, la, pa);
+    LOG_TAB("调整过的值: n: 0x%08lx, la: 0x%08lx, pa: 0x%08lx.\n", n, la, pa);
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
         *ptep = pa | PTE_P | perm;  // 取出后要保证权限的正确性.
     }
-    logline("完毕: 内核区域映射.");
+    logline("完毕: 内核区域映射");
 }
 
 //boot_alloc_page - allocate one page using pmm->alloc_pages(1) 
@@ -368,9 +371,9 @@ boot_alloc_page(void) {
 //         - check the correctness of pmm & paging mechanism, print PDT&PT
 void
 pmm_init(void) {
+    // print_bootPD(); //1024 个一级页表项,只有
     logline("初始化开始:内存管理模块");
-    LOG("目标: 根据实际物理内存分布, 维护物理内存状态表格,即 pages.\n");
-    LOG_TAB("kern_entry 最后仅配置了内核区域实际代码 4MB 的虚拟地址映射,现在要建立可管理空间内完整的映射,.\n");
+    LOG("目标: 建立完整的虚拟内存机制.\n");
 
     // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量boot_cr3 即内核一级页表基址.
     boot_cr3 = PADDR(boot_pgdir);
@@ -397,8 +400,8 @@ pmm_init(void) {
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
-    LOG("\t开始建立区间映射,即 [KERNBASE, KERNBASE+KERNBASE) => [0, KMEMSIZE).\n");
-    // 在此过程中会建立二级页表.
+    // 在此过程中会建立二级页表, 写对应的一级页表.
+    LOG("\t开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).\n");
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
     // 到目前为止还是用的 bootloader 的GDT.
@@ -412,7 +415,6 @@ pmm_init(void) {
     print_pgdir();
     
     kmalloc_init();
-    //print_bootPD();
     logline("初始化完毕:内存管理模块");
 }
 
@@ -701,12 +703,11 @@ pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {
 static void
 check_alloc_page(void) {
     pmm_manager->check();
-    LOG("check_alloc_page() succeeded!\n");
+    LOG_TAB("check_alloc_page() succeeded!\n");
 }
 
 static void
 check_pgdir(void) {
-    LOG("测试: page directory 相关函数y\n");
     assert(npage <= KMEMSIZE / PGSIZE);
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
@@ -750,7 +751,7 @@ check_pgdir(void) {
     free_page(pde2page(boot_pgdir[0]));
     boot_pgdir[0] = 0;
 
-    LOG("check_pgdir() succeeded!\n");
+    LOG_TAB("check_pgdir() succeeded!\n");
 }
 
 static void
@@ -840,7 +841,7 @@ get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, siz
 //print_pgdir - print the PDT&PT
 void
 print_pgdir(void) {
-    LOG("--- 当前页表信息:begin ---\n");
+    LOG("--- 当前页表信息:begin ---\n\n");
     size_t left, right = 0, perm;
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
         LOG("PDE(%03x) %08x-%08x %08x %s\n", right - left,
@@ -851,16 +852,17 @@ print_pgdir(void) {
                     l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
         }
     }
-    LOG("--- 当前页表信息:end ---\n");
+    LOG("--- 当前页表信息:end ---\n\n");
 }
 
 void
 print_bootPD(void) {
     LOG("boot time 一级页表内容,即二级页表物理基址表:\n");
-    for(size_t i = 0; i< PGSIZE; i+= sizeof(uintptr_t)){
-        LOG("   0x%08lx\n",boot_pgdir + i);
+    for(int i = 1023; i >= 0; --i){
+        LOG("%u\t0x%08lx\n", i, *(boot_pgdir + i));
     }
 }
+
 
 /**
  * 关于内存映射的一些计算:

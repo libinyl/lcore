@@ -73,7 +73,6 @@ finish_probe:
     # effective memory map does not change during the switch.
     # 从实模式切换到保护模式.
     # 但是切换到保护模式后,还会执行一些代码,才会调用 bootmain.
-    # 如果
     lgdt gdtdesc
 
     # CR0中包含了6个预定义标志，0位是保护允许位PE(Protedted Enable)，用于启动保护模式，如果PE位置1，则保护模式启动.
