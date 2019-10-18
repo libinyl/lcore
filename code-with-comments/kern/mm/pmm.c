@@ -237,7 +237,7 @@ static void
 page_init(void) {
     logline("初始化开始:分页式虚拟地址空间管理");
     LOG("目标: 根据探测得到的物理空间分布,初始化 pages 表格.\n\n");
-    LOG_TAB("1. 确定 pages 基址. 通过 ends 向上取整得到.\n");
+    LOG_TAB("1. 确定 pages 基址. 通过 ends 向上取整得到, 位于 end 之上, 这意味着从此就已经突破了内核文件本身的内存空间,开始动态分配内存\n");
     LOG_TAB("2. 确定 page 数 npages,即 可管理内存的页数.\n");
     LOG_TAB("\t2.1 确定实际管理的物理内存大小maxpa.即向上取探测结果中的最大可用地址,但不得大于管理上限 KMEMSIZE. maxpa = min{maxpa, KMEMSIZE}.\n");
     LOG_TAB("\t2.2 npage = maxpa/PAGESIZE.\n");
@@ -338,20 +338,22 @@ page_init(void) {
  */ 
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
-    LOG_TAB("一级页表地址:0x%08lx\n",pgdir);
-    LOG_TAB("区间[0x%08lx,0x%08lx + 0x%08lx ) -> [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
-    LOG_TAB("其中 size=%u M\n",size/1024/1024);
+    //LOG_TAB("一级页表地址:0x%08lx\n",pgdir);
+    LOG_TAB("映射区间[0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
+    LOG_TAB("区间长度 = %u M\n", size/1024/1024);
 
     assert(PGOFF(la) == PGOFF(pa));// 要映射的地址在 page 内的偏移量应当相同
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
-    LOG_TAB("调整过的值: n: 0x%08lx, la: 0x%08lx, pa: 0x%08lx.\n", n, la, pa);
+    LOG_TAB("校准后得到需映射页数 = %u\n", n);
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
-        *ptep = pa | PTE_P | perm;  // 取出后要保证权限的正确性.
+        *ptep = pa | PTE_P | perm;  // 写 la 对应的二级页表; 要保证权限的正确性.
     }
+    LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 内核虚拟地址的 1G 内存空间对应一级页表的上 1/4, 即  256 项; 对应 256 个二级页表, 占用空间 256 * 1024 = 256KB\n");
+    
     logline("完毕: 内核区域映射");
 }
 
@@ -397,11 +399,15 @@ pmm_init(void) {
     // 定义一块映射,使得可以更方便地访问一级页表的内容.在 print_pgdir 中用到.
     // 定义一个高于 KERNBASE + KMEMSIZE 的地址 VPT, 设置[VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB )的映射.
     // 这样一来, 只要访问到 VPT 起始的 4MB 的虚拟地址范围内,都会映射到 boot_pgdir 对应的起始的 4MB ,即一级页表本身! 太稳了.
+    LOG("\n开始建立一级页表自映射: [VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB).\n");
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
+    LOG("自映射完毕,当前页表:\n");
+    print_pgdir();
+
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
     // 在此过程中会建立二级页表, 写对应的一级页表.
-    LOG("\t开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).\n");
+    LOG("\n开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).\n");
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
 
     // 到目前为止还是用的 bootloader 的GDT.
@@ -841,18 +847,20 @@ get_pgtable_items(size_t left, size_t right, size_t start, uintptr_t *table, siz
 //print_pgdir - print the PDT&PT
 void
 print_pgdir(void) {
-    LOG("--- 当前页表信息:begin ---\n\n");
+    LOG("\n");
+    LOG_TAB("--- 页表信息 begin ---\n\n");
     size_t left, right = 0, perm;
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
-        LOG("PDE(%03x) %08x-%08x %08x %s\n", right - left,
+        LOG_TAB("PDE(%03x) %08x-%08x %08x %s\n", right - left,
                 left * PTSIZE, right * PTSIZE, (right - left) * PTSIZE, perm2str(perm));
         size_t l, r = left * NPTEENTRY;
         while ((perm = get_pgtable_items(left * NPTEENTRY, right * NPTEENTRY, r, vpt, &l, &r)) != 0) {
-            LOG("  |-- PTE(%05x) %08x-%08x %08x %s\n", r - l,
+            LOG_TAB("  |-- PTE(%05x) %08x-%08x %08x %s\n", r - l,
                     l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
         }
     }
-    LOG("--- 当前页表信息:end ---\n\n");
+    LOG("\n");
+    LOG_TAB("--- 页表信息 end ---\n\n");
 }
 
 void

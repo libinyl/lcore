@@ -58,14 +58,19 @@ idt_init(void) {
 
     // 输出信息
 
-    LOG("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
+    LOG_TAB("vec_num\tis_trap\tcode_seg\thandle_addr\tDPL\n");
     for (i = 0; i < sizeof(idt) / sizeof(struct gatedesc); i ++) {
-        LOG("0x%x\t",i);
-        LOG("%s\t", idt[i].gd_type==STS_TG32?"y":"n");
-        LOG("%s\t", "GD_KTEXT");
-        LOG("0x%x\t", __vectors[i]);
-        LOG("%d",idt[i].gd_dpl);
-        LOG("\n");
+        if(i == 0 || i == T_SYSCALL || i == sizeof(idt) / sizeof(struct gatedesc) -1){
+
+            LOG_TAB("0x%x",i);
+            LOG_TAB("%s", idt[i].gd_type==STS_TG32? "y" : "n");
+            LOG_TAB("%s", "GD_KTEXT");
+            LOG_TAB("0x%x", __vectors[i]);
+            LOG_TAB("%d",idt[i].gd_dpl);
+            LOG("\n");
+            if(i != sizeof(idt) / sizeof(struct gatedesc) -1)
+                LOG_TAB("...\t...\t...\t...\t...\t\t...\n");
+        }
     }
 
     logline("初始化完毕:中断向量表");

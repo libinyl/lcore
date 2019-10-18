@@ -20,6 +20,7 @@
 #define LOG_PMM_ON 1            // 物理内存管理模块开关
 #define LOG_VMM_ON 0            // vmm 模块开关
 #define LOG_COS_ON 0            // console 模块开关
+#define LOG_TRAP_ON   1            // 中断模块开关
 
 
 #define __MODULE_INIT_  "kern/init/init.c"
@@ -28,6 +29,7 @@
 #define __MODULE_PMM_DEFAULT_   "kern/mm/default_pmm.c"
 #define __MODULE_VMM_   "kern/mm/vmm.c"
 #define __MODULE_COS_   "kern/driver/console.c"
+#define __MODULE_TRAP_   "kern/trap/trap.c"
 
 #define LOG_TAB(_LOG_STR, ...)\
     LOG("\t"_LOG_STR, ##__VA_ARGS__)

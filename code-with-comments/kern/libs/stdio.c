@@ -89,6 +89,7 @@ log_check(const char *filename){
     if(!strcmp(filename, __MODULE_VMM_) && LOG_VMM_ON) return 1;
     if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
     if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;
+    if(!strcmp(filename, __MODULE_TRAP_) && LOG_TRAP_ON) return 1;
     return 0;
 }
 
