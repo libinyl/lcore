@@ -17,10 +17,10 @@
 
 #define LOG_INIT_ON  0         // init 模块开关
 #define LOG_DEBUG_ON 1          // debug 模块开关,应保持开启
-#define LOG_PMM_ON 1            // 物理内存管理模块开关
-#define LOG_VMM_ON 0            // vmm 模块开关
+#define LOG_PMM_ON 0            // 物理内存管理模块开关
+#define LOG_VMM_ON 1            // vmm 模块开关
 #define LOG_COS_ON 0            // console 模块开关
-#define LOG_TRAP_ON   1            // 中断模块开关
+#define LOG_TRAP_ON 0            // 中断模块开关
 
 
 #define __MODULE_INIT_  "kern/init/init.c"

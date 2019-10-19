@@ -39,7 +39,7 @@
  *                            |                                 |
  *                            +---------------------------------+ 0xFB000000
  *                            |   Cur. Page Table (Kern, RW)    | RW/-- PTSIZE  = 4M, 拜 VPT 所赐,内容就是一级页表的内容
- *     VPT -----------------> +---------------------------------+ 0xFAC00000    = 4012M 内核(新)二级页表起始虚地址
+ *     VPT -----------------> +---------------------------------+ 0xFAC00000    = 4012M = 1003/1024 * 4096 自映射一级页表起始
  *                            |        Invalid Memory (*)       | --/--
  *     KERNTOP -------------> +---------------------------------+ 0xF8000000    = 3968M
  *                            |                                 |
@@ -78,7 +78,7 @@
 //#define KMEMSIZE            0x00800000                  // 8M
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
-#define VPT                 0xFAC00000                  // = 4012M 自映射起始点
+#define VPT                 0xFAC00000                  // = 4012M = 1003/1024 * 4096 自映射起始点
 
 #define KSTACKPAGE          2                           // # of pages in kernel stack
 #define KSTACKSIZE          (KSTACKPAGE * PGSIZE)       // sizeof kernel stack

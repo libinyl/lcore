@@ -1,4 +1,5 @@
 file bin/kernel
 target remote :1234
-break kern_entry
-break kern_init
+b kern_init
+b pmm_init
+b gdt_init

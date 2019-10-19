@@ -311,7 +311,7 @@ default_check(void) {
     }
     assert(count == 0);
     assert(total == 0);
-    LOG_TAB("default_check(): succeed!\n");
+    LOG_TAB("%-20s%s\n","default_check()", ": succeed!");
 }
 
 const struct pmm_manager default_pmm_manager = {

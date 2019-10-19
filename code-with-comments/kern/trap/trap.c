@@ -69,7 +69,7 @@ idt_init(void) {
             LOG_TAB("%d",idt[i].gd_dpl);
             LOG("\n");
             if(i != sizeof(idt) / sizeof(struct gatedesc) -1)
-                LOG_TAB("...\t...\t...\t\t...\t...\t\t...\n");
+                LOG_TAB("...\tnt...\t\t...\t\t0\n");
         }
     }
 

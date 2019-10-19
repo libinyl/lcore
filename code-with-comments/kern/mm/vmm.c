@@ -352,14 +352,12 @@ check_pgfault(void) {
 
     size_t nr_free_pages_store = nr_free_pages();
     LOG("初始可用页数: %u.\n",nr_free_pages_store);
-    
-
     check_mm_struct = mm_create();
     assert(check_mm_struct != NULL);
 
     struct mm_struct *mm = check_mm_struct;
     pde_t *pgdir = mm->pgdir = boot_pgdir;
-    LOG("此mm_struct的一级页表地址是:x%08lx.\n",pgdir);
+    LOG("此mm_struct的一级页表地址是: 0x%08lx.\n",pgdir);
     assert(pgdir[0] == 0);
 
 
@@ -372,7 +370,8 @@ check_pgfault(void) {
     uintptr_t addr = 0x100; // = 256B
     assert(find_vma(mm, addr) == vma);
 
-    LOG("   开始对此区域进行写入\n");
+    LOG("   开始对此区域进行写入.\n");
+    LOG("预计缺页情况:");
     int i, sum = 0;
     for (i = 0; i < 100; i ++) {
         *(char *)(addr + i) = i;
@@ -536,7 +535,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
    }
 #endif
     // 1. 加载地址 addr 在所属 mm 中对应的的二级页表项,不存在则创建
-    LOG("开始恢复缺页异常\n");
+    LOG("开始恢复缺页异常: 建立对应虚拟地址的页表即可.\n");
     if ((ptep = get_pte(mm->pgdir, addr, 1)) == NULL) {
         LOG("get_pte in do_pgfault failed\n");
         goto failed;

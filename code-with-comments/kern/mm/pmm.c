@@ -168,7 +168,6 @@ gdt_init(void) {
 static void
 init_pmm_manager(void) {
     pmm_manager = &default_pmm_manager;
-    LOG_TAB("物理内存管理器名称: %s\n", pmm_manager->name);
     pmm_manager->init();
     LOG_TAB("物理内存管理器实例- %s 初始化完毕.\n",pmm_manager->name);
 }
@@ -235,7 +234,7 @@ nr_free_pages(void) {
  */
 static void
 page_init(void) {
-    logline("初始化开始:分页式虚拟地址空间管理");
+    logline("初始化开始:内存分页记账");
     LOG("目标: 根据探测得到的物理空间分布,初始化 pages 表格.\n\n");
     LOG_TAB("1. 确定 pages 基址. 通过 ends 向上取整得到, 位于 end 之上, 这意味着从此就已经突破了内核文件本身的内存空间,开始动态分配内存\n");
     LOG_TAB("2. 确定 page 数 npages,即 可管理内存的页数.\n");
@@ -315,7 +314,7 @@ page_init(void) {
             LOG_TAB("此区间不可用, 原因: BIOS 认定非可用内存.\n");
         }
     }
-    logline("初始化完毕:分页式虚拟地址空间管理");
+    logline("初始化完毕: 内存分页记账");
 }
 
 //boot_map_segment - setup&enable the paging mechanism
@@ -338,8 +337,10 @@ page_init(void) {
  */ 
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
+    logline("开始: 内核区域映射");
+
     //LOG_TAB("一级页表地址:0x%08lx\n",pgdir);
-    LOG_TAB("映射区间[0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,size,la,la,size);
+    LOG_TAB("映射区间[0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n", la, la, size, pa, pa, size);
     LOG_TAB("区间长度 = %u M\n", size/1024/1024);
 
     assert(PGOFF(la) == PGOFF(pa));// 要映射的地址在 page 内的偏移量应当相同
@@ -347,14 +348,14 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
     LOG_TAB("校准后映射区间: [0x%08lx, 0x%08lx), 页数:%u\n", la, pa, n);
-    LOG_TAB("校准后映射区间: [0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,n*PGSIZE,la,la,n*PGSIZE);
+    LOG_TAB("校准后映射区间: [0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n", la, la, n * PGSIZE, pa, pa, n * PGSIZE);
 
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
         *ptep = pa | PTE_P | perm;  // 写 la 对应的二级页表; 要保证权限的正确性.
     }
-    LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 虚存对一级页表比例: [KERNBASE, KERNBASE + KMEMSIZE) <=> [768, 896) <=> [3/4, 7/8)");
+    LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 虚存对一级页表比例: [KERNBASE, KERNBASE + KMEMSIZE) <=> [768, 896) <=> [3/4, 7/8)\n");
     
     logline("完毕: 内核区域映射");
 }
@@ -379,9 +380,11 @@ pmm_init(void) {
     logline("初始化开始:内存管理模块");
     LOG("目标: 建立完整的虚拟内存机制.\n");
 
+
     // 之前已经开启了paging,用的是 bootloader 的页表基址.现在单独维护一个变量boot_cr3 即内核一级页表基址.
     boot_cr3 = PADDR(boot_pgdir);
-    LOG_TAB("已维护内核页表物理地址.\n");
+    LOG_TAB("已维护内核页表物理地址;当前页表只临时维护了 KERNBASE 起的 4M 映射,页表内容:\n");
+    print_all_pt(boot_pgdir);
 
     // 初始化物理内存分配器,之后即可使用其 alloc/free 的功能
     init_pmm_manager();
@@ -403,16 +406,14 @@ pmm_init(void) {
     // 这样一来, 只要访问到 VPT 起始的 4MB 的虚拟地址范围内,都会映射到 boot_pgdir 对应的起始的 4MB ,即一级页表本身! 太稳了.
     LOG("\n开始建立一级页表自映射: [VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB).\n");
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
-    LOG("自映射完毕,boot 页表状态:\n");
+    LOG("\n自映射完毕.\n");
     //print_pgdir();
     print_all_pt(boot_pgdir);
 
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
     // 在此过程中会建立二级页表, 写对应的一级页表.
-    LOG("\n开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).\n");
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
-    LOG("区间映射完毕, boot 页表状态\n:");
     print_all_pt(boot_pgdir);
 
     // 到目前为止还是用的 bootloader 的GDT.
@@ -453,7 +454,6 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
 #if 0
     /* 原注释可参考官方 repo */
 #endif
-    //LOG("   对于指定的线性地址 la=0x%08lx,根据页目录pgdir=0x%08lx,返回其页表项pte.创建选项是%d.\n.",la, pgdir, create);
     // 1. 定位到一级页表项
     //      la 的一级页表索引=PDX(la)
     //      la 的一级页表项地址=&pgdir[PDX(la)]
@@ -497,6 +497,10 @@ get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
 //page_remove_pte - free an Page sturct which is related linear address la
 //                - and clean(invalidate) pte which is related linear address la
 //note: PT is changed, so the TLB need to be invalidate 
+/**
+ * 移除二级页表项 ptep 对应的 page, 置零此二级页表项.
+ * 手动作废 pgdir 和 la 对应的 tlb
+ */ 
 static inline void
 page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
     /* LAB2 EXERCISE 3: YOUR CODE
@@ -635,14 +639,14 @@ page_remove(pde_t *pgdir, uintptr_t la) {
     }
 }
 
-//page_insert - build the map of phy addr of an Page with the linear addr la
-// paramemters:
-//  pgdir: the kernel virtual base address of PDT
-//  page:  the Page which need to map
-//  la:    the linear address need to map
-//  perm:  the permission of this Page which is setted in related pte
-// return value: always 0
-//note: PT is changed, so the TLB need to be invalidate 
+/**
+ * 建立 pte=>page 的映射.
+ * 从虚拟地址到 la 到 page 在一级页表pgdir下的映射.
+ * 1. 获取la 对应的 pte
+ * 2. 如果 pte 已存在,就移除掉
+ * 3. 将 pte 指向的 page 指定为参数中的 page,以及一些权限.
+ * 4. 更新 TLB
+ */ 
 int
 page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm) {
     pte_t *ptep = get_pte(pgdir, la, 1);
@@ -678,7 +682,10 @@ tlb_invalidate(pde_t *pgdir, uintptr_t la) {
 //                  - pa<->la with linear address la and the PDT pgdir
 /**
  * 
- * 建立虚拟地址 la 到物理空间的的映射
+ * 新建一个在 pgdir 下, 从未映射过的虚拟地址 la 到物理空间的的映射
+ * 1. la 是从未映射过的,所以肯定要分配一个物理空间 page 与其对应.
+ * 2. 建立页表
+ * 3. 将新 page 设置为可交换的.
  * 
  * la: liner address,线性地址
  * perm: permission,权限
@@ -714,7 +721,7 @@ pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm) {
 static void
 check_alloc_page(void) {
     pmm_manager->check();
-    LOG_TAB("check_alloc_page() succeeded!\n");
+    LOG_TAB("%-20s%s\n","check_alloc_page()", ": succeed!");
 }
 
 static void
@@ -762,7 +769,8 @@ check_pgdir(void) {
     free_page(pde2page(boot_pgdir[0]));
     boot_pgdir[0] = 0;
 
-    LOG_TAB("check_pgdir() succeeded!\n");
+    LOG_TAB("%-20s%s\n","check_pgdir()", ": succeed!");
+
 }
 
 static void
@@ -869,14 +877,20 @@ print_pgdir(void) {
 }
 
 void
-print_all_pt(pde_t *pgdir) {
-    LOG("页表内容:\n");
-    LOG_TAB("一级页表地址: 0x%08lx\n", pgdir);
-    LOG_TAB("一级页表内非 0 项:\n");
+print_all_pt(pde_t *pt_base) {
+    LOG("\n一级页表内容:\n\n");
+    LOG_TAB("索引\t二级页表物理基址\t存在位\t读写性\t特权级\n");
     for(int i = 1023; i >= 0; -- i){
-        if(*(boot_pgdir + i) != 0)
-            LOG_TAB("%u\t0x%08lx\n", i, *(boot_pgdir + i));
+        pde_t *pdep = pt_base + i;
+        if(*pdep != 0){
+            LOG_TAB("%u", i);
+            LOG_TAB("0x%08lx", (*pdep) & ~0xFFF );
+            LOG_TAB("\t%u",(*pdep) & 1);
+            LOG_TAB("%s",(*pdep) & 1<<1 == 0 ? "r":"rw");
+            LOG_TAB("%s\n",(*pdep) & 1<<2 == 0 ? "s":"u");
+        }
     }
+    LOG("\n");
 }
 
 
@@ -885,8 +899,5 @@ print_all_pt(pde_t *pgdir) {
  * 
  * Q 在进行地址映射时,ucore 的处理方式是,不考虑实际物理内存大小,而是直接按照设定的物理内存上限 KMEMSIZE 进行映射.
  *      这种做法基于虚拟内存的思想,把完整的物理地址一股脑全部映射到虚拟地址空间指定的这一区域, 这个区域构成了内核在每个进程独立的运行区间.
- * 
- * 
- * 
  * 
  */

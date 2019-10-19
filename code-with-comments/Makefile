@@ -323,14 +323,19 @@ monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
 
 TERMINAL := zsh
 
+# 建议调试方法:
+# 启动 1 个窗口,执行 make dbg4ec
+# 启动另一个窗口,执行 make debug-sep,即可分开gdb 输出和 qemu 输出,避免花屏,输出更加清晰
 dbg4ec: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -parallel stdio $(QEMUOPTS) -serial null
+
+debug-gdb: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+	$(V)$(TERMINAL) -c "$(GDB) -q -x tools/gdbinit"
 
 debug: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -parallel stdio $(QEMUOPTS) -serial null &
 	$(V)sleep 2
 	$(V)$(TERMINAL) -c "$(GDB) -q -x tools/gdbinit"
-
 
 debug-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS) -nographic &
