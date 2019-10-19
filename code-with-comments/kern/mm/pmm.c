@@ -346,13 +346,15 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
     pa = ROUNDDOWN(pa, PGSIZE);
-    LOG_TAB("校准后得到需映射页数 = %u\n", n);
+    LOG_TAB("校准后映射区间: [0x%08lx, 0x%08lx), 页数:%u\n", la, pa, n);
+    LOG_TAB("校准后映射区间: [0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n",pa,pa,n*PGSIZE,la,la,n*PGSIZE);
+
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
         *ptep = pa | PTE_P | perm;  // 写 la 对应的二级页表; 要保证权限的正确性.
     }
-    LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 内核虚拟地址的 1G 内存空间对应一级页表的上 1/4, 即  256 项; 对应 256 个二级页表, 占用空间 256 * 1024 = 256KB\n");
+    LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 虚存对一级页表比例: [KERNBASE, KERNBASE + KMEMSIZE) <=> [768, 896) <=> [3/4, 7/8)");
     
     logline("完毕: 内核区域映射");
 }
@@ -401,7 +403,7 @@ pmm_init(void) {
     // 这样一来, 只要访问到 VPT 起始的 4MB 的虚拟地址范围内,都会映射到 boot_pgdir 对应的起始的 4MB ,即一级页表本身! 太稳了.
     LOG("\n开始建立一级页表自映射: [VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB).\n");
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
-    LOG("自映射完毕,一级页表:\n");
+    LOG("自映射完毕,boot 页表状态:\n");
     //print_pgdir();
     print_all_pt(boot_pgdir);
 
@@ -410,6 +412,8 @@ pmm_init(void) {
     // 在此过程中会建立二级页表, 写对应的一级页表.
     LOG("\n开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).\n");
     boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
+    LOG("区间映射完毕, boot 页表状态\n:");
+    print_all_pt(boot_pgdir);
 
     // 到目前为止还是用的 bootloader 的GDT.
     // 现在更新为内核的 GDT,把内存平铺, virtual_addr 0 ~ 4G = linear_addr 0 ~ 4G.
@@ -868,10 +872,10 @@ void
 print_all_pt(pde_t *pgdir) {
     LOG("页表内容:\n");
     LOG_TAB("一级页表地址: 0x%08lx\n", pgdir);
-    LOG("一级也表内非 0 项:\n");
+    LOG_TAB("一级页表内非 0 项:\n");
     for(int i = 1023; i >= 0; -- i){
         if(*(boot_pgdir + i) != 0)
-            LOG("%u\t0x%08lx\n", i, *(boot_pgdir + i));
+            LOG_TAB("%u\t0x%08lx\n", i, *(boot_pgdir + i));
     }
 }
 
