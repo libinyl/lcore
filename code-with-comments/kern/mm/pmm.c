@@ -401,8 +401,9 @@ pmm_init(void) {
     // 这样一来, 只要访问到 VPT 起始的 4MB 的虚拟地址范围内,都会映射到 boot_pgdir 对应的起始的 4MB ,即一级页表本身! 太稳了.
     LOG("\n开始建立一级页表自映射: [VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB).\n");
     boot_pgdir[PDX(VPT)] = PADDR(boot_pgdir) | PTE_P | PTE_W;
-    LOG("自映射完毕,当前页表:\n");
-    print_pgdir();
+    LOG("自映射完毕,一级页表:\n");
+    //print_pgdir();
+    print_all_pt(boot_pgdir);
 
 
     // 把所有物理内存区域映射到虚拟空间.即 [0, KMEMSIZE)->[KERNBASE, KERNBASE+KERNBASE);
@@ -864,10 +865,13 @@ print_pgdir(void) {
 }
 
 void
-print_bootPD(void) {
-    LOG("boot time 一级页表内容,即二级页表物理基址表:\n");
-    for(int i = 1023; i >= 0; --i){
-        LOG("%u\t0x%08lx\n", i, *(boot_pgdir + i));
+print_all_pt(pde_t *pgdir) {
+    LOG("页表内容:\n");
+    LOG_TAB("一级页表地址: 0x%08lx\n", pgdir);
+    LOG("一级也表内非 0 项:\n");
+    for(int i = 1023; i >= 0; -- i){
+        if(*(boot_pgdir + i) != 0)
+            LOG("%u\t0x%08lx\n", i, *(boot_pgdir + i));
     }
 }
 

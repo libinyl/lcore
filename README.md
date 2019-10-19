@@ -1,6 +1,8 @@
-## ucore 完全注释
+## lcore - a simple toy OS
 
-**注: 此 repo 内容纯个人笔记向,仅供参考.**
+*fork from ucore*
+
+此 repo 内容纯个人娱乐 & 笔记向,仅供参考.
 
 ## 一些可能有用的图示:
 
@@ -43,7 +45,7 @@ kernel entry:
 
 	text start          : 	0xc0100000 = 3072 M + 1024K
 	entry               : 	0xc0100036 = 3072 M + 1024K
-	etext               : 	0xc0115f0a = 3072 M + 1111K
+	etext               : 	0xc0116003 = 3072 M + 1112K
 	edata               : 	0xc015c000 = 3072 M + 1392K
 	end(.bss 结束))   : 	0xc0160324 = 3072 M + 1408K
 	内核文件预计占用最大内存	:	4MB
@@ -102,7 +104,7 @@ kernel entry:
 	考察区间: [00100000,07fe0000):		此区间可用, 大小为 0x07d5f000 B = 128380 KB = 125 MB = 32095 page.
 		default_init_memmap:
 			已将一块连续地址空间加入 freelist,起始: 0xc0166a24, page 数:32095.
-			当前空闲 pag5
+			� page 数:32095
 	考察区间: [07fe0000,08000000):		此区间不可用, 原因: BIOS 认定非可用内存.
 	考察区间: [fffc0000,100000000):		此区间不可用, 原因: BIOS 认定非可用内存.
 
@@ -112,11 +114,26 @@ kernel entry:
 	default_check(): succeed!
 	check_alloc_page() succeeded!
 	check_pgdir() succeeded!
-	开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).
-	一级页表地址:0xc015a000
-	区间[0x00000000,0x00000000 + 0x38000000 ) -> [0xc0000000, 0xc0000000 + 0x38000000 )
-	其中 size=896 M
-	调整过的值: n: 0x00038000, la: 0xc0000000, pa: 0x00000000.
+
+开始建立一级页表自映射: [VPT, VPT + 4MB) => [PADDR(boot_pgdir), PADDR(boot_pgdir) + 4MB).
+自映射完毕,当前页表:
+
+	--- 页表信息 begin ---
+
+	PDE(001) c0000000-c0400000 00400000 urw
+	  |-- PTE(00400) c0000000-c0400000 00400000 -rw
+	PDE(001) fac00000-fb000000 00400000 -rw
+	  |-- PTE(00001) faf00000-faf01000 00001000 urw
+	  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
+
+	--- 页表信息 end ---
+
+
+开始建立区间映射: [KERNBASE, KERNBASE + KERNBASE) => [0, KMEMSIZE).
+	映射区间[0x00000000,0x00000000 + 0x38000000 ) => [0xc0000000, 0xc0000000 + 0x38000000 )
+	区间长度 = 896 M
+	校准后得到需映射页数 = 229376
+	映射完毕, 直接按照可管理内存上限映射. 内核虚拟地址的 1G 内存空间对应一级页表的上 1/4, 即  256 项; 对应 256 个二级页表, 占用空间 256 * 1024 = 256KB
 
 
 --------------完毕: 内核区域映射--------------
@@ -130,14 +147,16 @@ kernel entry:
 --------------初始化完毕: 全局段描述表&TSS--------------
 
 check_boot_pgdir() succeeded!
---- 当前页表信息:begin ---
 
-PDE(0e0) c0000000-f8000000 38000000 urw
-  |-- PTE(38000) c0000000-f8000000 38000000 -rw
-PDE(001) fac00000-fb000000 00400000 -rw
-  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw
-  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
---- 当前页表信息:end ---
+	--- 页表信息 begin ---
+
+	PDE(0e0) c0000000-f8000000 38000000 urw
+	  |-- PTE(38000) c0000000-f8000000 38000000 -rw
+	PDE(001) fac00000-fb000000 00400000 -rw
+	  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw
+	  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
+
+	--- 页表信息 end ---
 
 
 
@@ -151,6 +170,11 @@ PDE(001) fac00000-fb000000 00400000 -rw
 
 --------------初始化开始:中断向量表--------------
 
+	vec_num	is_trap	code_seg	handle_addr	DPL
+	0x0	n	GD_KTEXT	0xc010341a	0
+	...	...	...	...	...		...
+	0x80	y	GD_KTEXT	0xc010388a...	...	...	...	...		...
+	0xff	n	GD_KTEXT	0xc0103e7e	0
 
 
 --------------初始化完毕:中断向量表--------------
@@ -163,15 +187,22 @@ PDE(001) fac00000-fb000000 00400000 -rw
 
 --------------开始测试: page fault--------------
 
---- 当前页表信息:begin ---
 
-PDE(0e0) c0000000-f8000000 38000000 urw
-  |-- PTE(38000) c0000000-f800000 38000000 -rw
-PDE(001) fac00000-fb000000 00400000 -rw
-  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw
-  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
---- 当前页表信息:end ---
+	--- 页表信息 begin ---
 
+	PDE(0e0) c0000000-f8000000 38000000 urw
+	  |-- PTE(38000) c0000000-f8000000 38000000 -rw
+	PDE(001) fac00000-fb000000 00400000 -rw
+	  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw
+	  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
+
+	--- 页表信息 end ---
+
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00000100,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
 
 
 --------------测试通过: page fault--------------
@@ -208,6 +239,61 @@ PDE(001) fac00000-fb000000 00400000 -rw
 
 --------------初始化开始:交换分区--------------
 
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00001000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00002000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00003000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00004000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00005000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00001000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00002000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00003000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00004000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00005000,解析错误码,得到触发原因: K/W [no page found].
+已获取触发缺页的 mm_struct
+内核检测到缺页异常中断.
+pgfault_handler: 开始处理缺页;
+缺页异常信息:
+   page fault at 0x00001000,解析错误码,得到触发原因: K/R [no page found].
+已获取触发缺页的 mm_struct
 
 
 --------------初始化完毕:交换分区--------------
@@ -227,6 +313,8 @@ PDE(001) fac00000-fb000000 00400000 -rw
 
 
 --------------初始化完毕:时钟控制器--------------
+
+user sh is running!!!
 ```
 
 ## todo
