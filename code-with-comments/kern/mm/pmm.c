@@ -146,6 +146,12 @@ load_esp0(uintptr_t esp0) {
 static void
 gdt_init(void) {
     logline("初始化开始: 全局段描述表&TSS");
+    LOG_TAB("1. 设置内存中的 ts 结构 ts.ts_esp0 = bootstacktop\n");
+    LOG_TAB("2. 设置内存中的 ts 结构 ts.ts_ss0 = KERNEL_DS\n");
+    LOG_TAB("3. 设置 GDT 表中的 TSS 一项, 维护内存 ts 地址\n");
+    LOG_TAB("4. 加载 TSS 段选择子到 TR 寄存器\n");
+    LOG_TAB("5. 更新所有段寄存器的段选择子值为 0,即平铺结构\n");
+
     // 设置内核栈基址和默认的 SS0
     load_esp0((uintptr_t)bootstacktop); // 设置TSS内核栈指针为bootstacktop
     ts.ts_ss0 = KERNEL_DS;              // 设置TSS内核栈段选择子(即内核栈基址),默认指向 GDT 中的 SEG_KDATA一项

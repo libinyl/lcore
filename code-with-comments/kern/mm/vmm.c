@@ -402,6 +402,8 @@ volatile unsigned int pgfault_num=0;
 /**
  * do_pgfault - page fault 中断处理函数,用于处理缺页异常.
  * 
+ * see also: pgfault_handler
+ * 
  * @mm         : 使用同一 PDT 的 vma 集合的控制块
  * @error_code : 由 x86 硬件设置的page fault 错误码,在trapframe->tf_err 中记录
  * @addr       : 出发内存访问异常的地址.(也就是CR 寄存器的值)

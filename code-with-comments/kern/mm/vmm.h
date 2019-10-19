@@ -63,7 +63,24 @@ struct vma_struct {
 #define VM_EXEC                 0x00000004
 #define VM_STACK                0x00000008
 
-// memory 描述符,描述整个进程空间的内存结构
+/**
+ * 面向处理器的虚拟内存状态维护器.
+ * 1) 维护了 vma 链表,标识可访问内存区域和权限.
+ * 2) 维护了可交换页链表, 用于换出调度.
+ * 
+ * mm_struct 是内存访问的核心结构, 被进程控制块维护.
+ * 
+ * 当 cpu 访问某个进程的某个地址va时,
+ *  0. 进程创建时 cpu 已获取此 mm 维护的页表基址
+ *  1. 获取此进程的 mm
+ *  2. 通过 mm 获取此地址的 vma.如果没有找到, 或者权限不正确,就会触发 segment fault;如果找到且权限正确则继续.
+ *  3. 根据此一级页表基址和 va,得到一级页表条目
+ *  4.1 若条目存在位是 0,则触发 page fault;
+ *  4.2 若条目存在位是 1,但二级页表存在位是 0,也触发 page fault.
+ *  4.3 若一直有存在位,则正常访问.
+ *  5 处理 page fault 是另一码事了
+ *      
+ */ 
 struct mm_struct {
     list_entry_t mmap_list;        // vma 链表,按基址排序                       | linear list link which sorted by start addr of vma 
     struct vma_struct *mmap_cache; // 当前正在使用的 vma                        | current accessed vma, used for speed purpose

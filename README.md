@@ -1,8 +1,8 @@
 ## lcore - a simple toy OS
 
-*fork from ucore*
+*inspired by ucore*
 
-此 repo 内容纯个人娱乐 & 笔记向,仅供参考.
+此 OS 纯个人娱乐 & 笔记向, 内含大量学习过程做的注释, 部分可能有失准确, 仅供参考.
 
 ## 一些可能有用的图示:
 
