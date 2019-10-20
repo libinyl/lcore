@@ -54,6 +54,9 @@ static struct run_queue __rq;
 void
 sched_init(void) {
     logline("初始化开始:进程调度器");
+    LOG_TAB("初始化队列: timer_list\n");
+    LOG_TAB("初始化队列: run_queue\n");
+
 
     list_init(&timer_list);
 
@@ -61,10 +64,10 @@ sched_init(void) {
 
     rq = &__rq;
     rq->max_time_slice = 5;
-    LOG("运行队列初始时间片被设置为%u\n", rq->max_time_slice);
+    LOG_TAB("\t运行队列初始时间片被设置为%u\n", rq->max_time_slice);
     sched_class->init(rq);
 
-    LOG("sched class: %s\n", sched_class->name);
+    LOG_TAB("sched class: %s\n", sched_class->name);
     logline("初始化完毕:进程调度器");
 
 }

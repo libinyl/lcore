@@ -77,7 +77,7 @@ getchar(void) {
     return c;
 }
 
-// todo: 用宏代替 logcheck 函数
+// todo: 用宏代替 logcheck 函数, 尽可能更简洁一点?
 int
 log_check(const char *filename){
     if(!LOG_MODULE_ALL_ON) return 0;
@@ -90,6 +90,7 @@ log_check(const char *filename){
     if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
     if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;
     if(!strcmp(filename, __MODULE_TRAP_) && LOG_TRAP_ON) return 1;
+    if(!strcmp(filename, __MODULE_SCHED_) && LOG_SCHED_ON) return 1;
     return 0;
 }
 

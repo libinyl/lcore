@@ -16,11 +16,12 @@
 #define LOG_MODULE_ALL_ON 1     // 模块日志总开关
 
 #define LOG_INIT_ON  0         // init 模块开关
-#define LOG_DEBUG_ON 1          // debug 模块开关,应保持开启
+#define LOG_DEBUG_ON 0          // debug 模块开关
 #define LOG_PMM_ON 0            // 物理内存管理模块开关
-#define LOG_VMM_ON 1            // vmm 模块开关
+#define LOG_VMM_ON 0            // vmm 模块开关
 #define LOG_COS_ON 0            // console 模块开关
 #define LOG_TRAP_ON 0            // 中断模块开关
+#define LOG_SCHED_ON 1            // 调度模块开关
 
 
 #define __MODULE_INIT_  "kern/init/init.c"
@@ -30,6 +31,7 @@
 #define __MODULE_VMM_   "kern/mm/vmm.c"
 #define __MODULE_COS_   "kern/driver/console.c"
 #define __MODULE_TRAP_   "kern/trap/trap.c"
+#define __MODULE_SCHED_   "kern/schedule/sched.c"
 
 #define LOG_TAB(_LOG_STR, ...)\
     LOG("\t"_LOG_STR, ##__VA_ARGS__)
