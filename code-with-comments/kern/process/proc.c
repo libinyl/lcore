@@ -306,6 +306,16 @@ kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     tf.tf_regs.reg_ebx = (uint32_t)fn;
     tf.tf_regs.reg_edx = (uint32_t)arg;
     tf.tf_eip = (uint32_t)kernel_thread_entry;      // 内核线程入口点
+
+
+    LOG("\nkernel_thread begin:\n");
+    LOG_TAB("为 do_fork 准备 trapframe:\n");
+    LOG_TAB("代码段选择子: 0x%08lx\n",KERNEL_CS);
+    LOG_TAB("数据段选择子: 0x%08lx\n",KERNEL_DS);
+    LOG_TAB("该内核线程起始地址初始化: 0x%08lx\n",(uintptr_t *)fn);
+    LOG_TAB("入口点初始化 :0x%08lx\n",kernel_thread_entry);
+    LOG("trapframe准备完毕,即将进入 do_fork:\n");
+
     return do_fork(clone_flags | CLONE_VM, 0, &tf);
 }
 
@@ -317,6 +327,7 @@ static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
     if (page != NULL) {
+        LOG("setup_kstack: kstack = new page(2)");
         proc->kstack = (uintptr_t)page2kva(page);
         return 0;
     }
@@ -354,16 +365,22 @@ put_pgdir(struct mm_struct *mm) {
 //         - if clone_flags & CLONE_VM, then "share" ; else "duplicate"
 static int
 copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
+    LOG_TAB("copy_mm:\n");
+    LOG_TAB("\t创建选项:\n");
+    LOG_TAB("\t是否共享父进程 mm? ");
     struct mm_struct *mm, *oldmm = current->mm;
 
     /* current is a kernel thread */
     if (oldmm == NULL) {
+        LOG("否, 进程是内核线程,共享一个 mm\n.");
         return 0;
     }
     if (clone_flags & CLONE_VM) {
+        LOG("是\n");
         mm = oldmm;
         goto good_mm;
     }
+    LOG("否,创建新 mm\n");
 
     int ret = -E_NO_MEM;
     if ((mm = mm_create()) == NULL) {
@@ -421,14 +438,18 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
 //copy_fs&put_fs function used by do_fork in LAB8
 static int
 copy_fs(uint32_t clone_flags, struct proc_struct *proc) {
+    LOG("copy_fs begin:\n");
+    LOG_TAB("是否共享父进程的文件控制块? ");
+
     struct files_struct *filesp, *old_filesp = current->filesp;
     assert(old_filesp != NULL);
 
     if (clone_flags & CLONE_FS) {
         filesp = old_filesp;
+        LOG("是,指向父进程的 fs.\n");
         goto good_files_struct;
     }
-
+    LOG("否,分配新 fs.\n");
     int ret = -E_NO_MEM;
     if ((filesp = files_create()) == NULL) {
         goto bad_files_struct;
@@ -441,11 +462,14 @@ copy_fs(uint32_t clone_flags, struct proc_struct *proc) {
 good_files_struct:
     files_count_inc(filesp);
     proc->filesp = filesp;
+    LOG_TAB("此控制块引用计数值已更新: %d\n",filesp->files_count);
+    LOG("copy_fs end\n");
     return 0;
 
 bad_dup_cleanup_fs:
     files_destroy(filesp);
 bad_files_struct:
+    LOG("copy_fs end, bad_files_struct\n");
     return ret;
 }
 
@@ -480,7 +504,7 @@ put_fs(struct proc_struct *proc) {
  */ 
 int
 do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
-    LOG("do_fork:\n");
+    LOG("\ndo_fork begin:\n");
     int ret = -E_NO_FREE_PROC;
     struct proc_struct *proc;
     if (nr_process >= MAX_PROCESS) {
@@ -517,36 +541,36 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
 	*    update step 1: set child proc's parent to current process, make sure current process's wait_state is 0
 	*    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
     */
-   LOG("    1. 分配 PCB 完毕\n");
+   LOG_TAB("1. 分配 PCB\n");
     if ((proc = alloc_proc()) == NULL) {
         goto fork_out;
     }
     // 设置新进程的父进程为当前进程
-    LOG("   2. 设置新进程的父进程是 current\n");
+    LOG_TAB("2. 指定父进程: current\n");
     proc->parent = current;
     assert(current->wait_state == 0);
     // 建立内核栈空间,并用proc->kstack维护,(指向栈底,低地址)
-    LOG("   3. 为新进程分配内核栈空间,用以维护陷入到内核的状态\n");
+    LOG_TAB("3. 设置内核栈空间: 2 page\n");
     if (setup_kstack(proc) != 0) {
         goto bad_fork_cleanup_proc;
     }
     // 设置文件系统数据结构
-    LOG("   4. 设置新进程的 file_struct 结构,从父进程选择性拷贝.\n");
+    LOG_TAB("4. 设置 file_struct.\n");
     if (copy_fs(clone_flags, proc) != 0) { //for LAB8
         goto bad_fork_cleanup_kstack;
     }
     //复制父进程的内存结构
-    LOG("   4. 设置新进程的 mm_struct 结构,从父进程选择性拷贝.\n");
+    LOG_TAB("4. 设置的 mm_struct\n");
     if (copy_mm(clone_flags, proc) != 0) {
         goto bad_fork_cleanup_fs;
     }
     // 复制父进程的 trapframe 和 context
-    LOG("   5. 设置新进程的 trapframe 结构,从父进程选择性拷贝.\n");
+    LOG_TAB("5. 设置 trapframe 结构\n");
 
     copy_thread(proc, stack, tf);
 
     // 添加到全局进程维护表中
-    LOG("   6. 将新进程维护到proc_list中.\n");
+    LOG_TAB("6. 将新进程维护到: proc_list.\n");
 
     bool intr_flag;
     local_intr_save(intr_flag);
@@ -559,12 +583,13 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     local_intr_restore(intr_flag);
 
     // 把子进程更新进程状态为 RUNNABLE 并添加到就绪队列
-    LOG("   7. 唤醒新进程,进程创建结束.\n");
+    LOG_TAB("7. 唤醒新进程,进程创建结束.\n");
     wakeup_proc(proc);
 
     // 子进程不会执行至此
     ret = proc->pid;    // 对父进程返回子进程的 pid
 fork_out:
+    LOG("\ndo_fork end\n");
     return ret;
 
 bad_fork_cleanup_fs:  //for LAB8
@@ -1185,8 +1210,10 @@ init_main(void *arg) {
  */
 void
 proc_init(void) {
-
-    logline("初始化开始:内核线程");
+    
+    logline("初始化开始: 内核线程");
+    LOG("proc_init:\n");
+    LOG_TAB("初始化队列: proc_list\n");
 
     int i;
     // 初始化进程表
@@ -1214,7 +1241,17 @@ proc_init(void) {
 
     current = idleproc;
 
+
+    LOG_TAB("内核初始线程描述: idleproc\n");
+    LOG_TAB("pid: %d\n",idleproc->pid);
+    LOG_TAB("name: %s\n",idleproc->name);
+    LOG_TAB("state: %s\n","PROC_RUNNABLE");
+    LOG_TAB("kstack: 0x%08lx\n",(uintptr_t)bootstack);
+    LOG_TAB("当前总进程数: %d\n",nr_process);
+    LOG_TAB("current 进程pid: %s\n",idleproc->name);
+
     int pid = kernel_thread(init_main, NULL, 0);
+    LOG("kernel_thread返回 pid:%d\n", pid);
     if (pid <= 0) {
         panic("create init_main failed.\n");
     }
@@ -1225,7 +1262,6 @@ proc_init(void) {
     assert(idleproc != NULL && idleproc->pid == 0);
     assert(initproc != NULL && initproc->pid == 1);
 
-    logline("初始化结束:内核线程");
 
 }
 

@@ -22,6 +22,7 @@
 #define LOG_COS_ON 0            // console 模块开关
 #define LOG_TRAP_ON 0            // 中断模块开关
 #define LOG_SCHED_ON 1            // 调度模块开关
+#define LOG_PROC_ON 1            // 进程模块开关
 
 
 #define __MODULE_INIT_  "kern/init/init.c"
@@ -32,16 +33,17 @@
 #define __MODULE_COS_   "kern/driver/console.c"
 #define __MODULE_TRAP_   "kern/trap/trap.c"
 #define __MODULE_SCHED_   "kern/schedule/sched.c"
+#define __MODULE_PROC_   "kern/process/proc.c"
 
 #define LOG_TAB(_LOG_STR, ...)\
     LOG("\t"_LOG_STR, ##__VA_ARGS__)
 
 #define LOG(_LOG_STR, ...)\
-        {\
+        do{\
             if(log_check(__FILE__)){\
                 log(_LOG_STR, ##__VA_ARGS__);\
             }\
-        }
+        }while(0)
     
 /* kern/libs/stdio.c */
 int cprintf(const char *fmt, ...);

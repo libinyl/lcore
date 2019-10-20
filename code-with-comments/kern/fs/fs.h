@@ -22,7 +22,7 @@ struct inode;
 struct file;
 
 /*
- * 进程的文件信息
+ * 进程的文件控制块
  */
 struct files_struct {
     struct inode *pwd;      // inode, 当前工作目录

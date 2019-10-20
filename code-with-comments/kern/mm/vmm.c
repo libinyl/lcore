@@ -196,6 +196,7 @@ out:
 
 int
 dup_mmap(struct mm_struct *to, struct mm_struct *from) {
+    LOG_TAB("\tdup_mmap:\n");
     assert(to != NULL && from != NULL);
     list_entry_t *list = &(from->mmap_list), *le = list;
     while ((le = list_prev(le)) != list) {

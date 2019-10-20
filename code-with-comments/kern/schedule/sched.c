@@ -64,7 +64,7 @@ sched_init(void) {
 
     rq = &__rq;
     rq->max_time_slice = 5;
-    LOG_TAB("\t运行队列初始时间片被设置为%u\n", rq->max_time_slice);
+    LOG_TAB("\t数值 max_time_slice = %u\n", rq->max_time_slice);
     sched_class->init(rq);
 
     LOG_TAB("sched class: %s\n", sched_class->name);

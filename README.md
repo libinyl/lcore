@@ -317,6 +317,10 @@ pgfault_handler: 开始处理缺页;
 user sh is running!!!
 ```
 
+## 日志开关
+
+位于 `stdio.h`
+
 ## todo
 
 - make debug-nox 会卡在 Continuing, 待修复. 使用不带 nox 的版本可以调试.
