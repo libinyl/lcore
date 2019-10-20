@@ -324,3 +324,5 @@ user sh is running!!!
 ## todo
 
 - make debug-nox 会卡在 Continuing, 待修复. 使用不带 nox 的版本可以调试.
+
+知乎专栏: https://zhuanlan.zhihu.com/ucore
