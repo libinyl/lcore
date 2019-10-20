@@ -11,6 +11,7 @@
 #include <swap.h>
 #include <vmm.h>
 #include <kmalloc.h>
+#include <kdebug.h>
 
 /* *
  * 任务状态段: (Task State Segment)

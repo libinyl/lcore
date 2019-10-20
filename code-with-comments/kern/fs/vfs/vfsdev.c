@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <kdebug.h>
 
 /* 
  * [设备信息-devinode]关系节点,

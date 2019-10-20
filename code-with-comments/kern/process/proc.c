@@ -15,6 +15,7 @@
 #include <fs.h>
 #include <vfs.h>
 #include <sysfile.h>
+#include <kdebug.h>
 
 /**
  * ----------进程/线性机制的设计原理-----------
@@ -327,7 +328,7 @@ static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
     if (page != NULL) {
-        LOG("setup_kstack: kstack = new page(2)");
+        LOG_TAB("setup_kstack: kstack = new page(2)\n");
         proc->kstack = (uintptr_t)page2kva(page);
         return 0;
     }
@@ -365,14 +366,14 @@ put_pgdir(struct mm_struct *mm) {
 //         - if clone_flags & CLONE_VM, then "share" ; else "duplicate"
 static int
 copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
-    LOG_TAB("copy_mm:\n");
-    LOG_TAB("\t创建选项:\n");
-    LOG_TAB("\t是否共享父进程 mm? ");
+    LOG("copy_mm start:\n");
+    LOG_TAB("是否共享父进程 mm? ");
     struct mm_struct *mm, *oldmm = current->mm;
 
     /* current is a kernel thread */
     if (oldmm == NULL) {
-        LOG("否, 进程是内核线程,共享一个 mm\n.");
+        LOG("否, 进程是内核线程,共享一个 mm.\n");
+        LOG("copy_mm end\n");
         return 0;
     }
     if (clone_flags & CLONE_VM) {
@@ -404,6 +405,7 @@ good_mm:
     mm_count_inc(mm);
     proc->mm = mm;
     proc->cr3 = PADDR(mm->pgdir);
+    LOG("copy_mm end\n");
     return 0;
 bad_dup_cleanup_mmap:
     exit_mmap(mm);
@@ -411,6 +413,7 @@ bad_dup_cleanup_mmap:
 bad_pgdir_cleanup_mm:
     mm_destroy(mm);
 bad_mm:
+    LOG("copy_mm end, bad_mm.\n");
     return ret;
 }
 
@@ -560,12 +563,12 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
         goto bad_fork_cleanup_kstack;
     }
     //复制父进程的内存结构
-    LOG_TAB("4. 设置的 mm_struct\n");
+    LOG_TAB("4. 设置 mm_struct\n");
     if (copy_mm(clone_flags, proc) != 0) {
         goto bad_fork_cleanup_fs;
     }
     // 复制父进程的 trapframe 和 context
-    LOG_TAB("5. 设置 trapframe 结构\n");
+    LOG_TAB("5. 设置 trapframe\n");
 
     copy_thread(proc, stack, tf);
 

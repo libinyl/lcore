@@ -6,6 +6,7 @@
 #include <pmm.h>
 #include <assert.h>
 #include <stdio.h>
+#include <kdebug.h>
 
 void
 swapfs_init(void) {

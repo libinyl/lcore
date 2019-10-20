@@ -8,6 +8,7 @@
 #include <x86.h>
 #include <swap.h>
 #include <kmalloc.h>
+#include <kdebug.h>
 
 /* 
   vmm design include two parts: mm_struct (mm) & vma_struct (vma)
@@ -55,7 +56,7 @@ mm_create(void) {
         set_mm_count(mm, 0);
         sem_init(&(mm->mm_sem), 1);
     }    
-    LOG("初始化了一个 mm_struct.\n");
+    LOG("已初始化默认 mm_struct.\n");
     return mm;
 }
 

@@ -5,6 +5,7 @@
 #include <swap.h>
 #include <swap_fifo.h>
 #include <list.h>
+#include <kdebug.h>
 
 /* [wikipedia]The simplest Page Replacement Algorithm(PRA) is a FIFO algorithm. The first-in, first-out
  * page replacement algorithm is a low-overhead algorithm that requires little book-keeping on

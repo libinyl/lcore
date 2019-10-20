@@ -7,6 +7,7 @@
 #include <error.h>
 #include <assert.h>
 #include <kmalloc.h>
+#include <kdebug.h>
 
 /* 
  * 分配一个 inode 结构,用于初始化指定类型的设备

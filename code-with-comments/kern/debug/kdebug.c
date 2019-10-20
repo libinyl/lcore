@@ -403,3 +403,37 @@ print_stackframe(void) {
     }
 }
 
+
+int
+log(const char *fmt, ...) {
+    va_list ap;
+    int cnt;
+    va_start(ap, fmt);
+    cnt = vcprintf(fmt, ap);
+    va_end(ap);
+    return cnt;
+}
+
+void logline(const char *str) {
+    if (LOG_LINE_ON)
+        cprintf("\n\n--------------%s--------------\n\n",str);
+}
+
+// todo: 用宏代替 logcheck 函数, 尽可能更简洁一点?
+int
+log_check(const char *filename){
+    if(!LOG_MODULE_ALL_ON) return 0;    // 总控
+    if(!strcmp(filename, __MODULE_INIT_) && LOG_INIT_ON) return 1;
+    /* pmm begin */
+    if(!strcmp(filename, __MODULE_PMM_) && LOG_PMM_ON) return 1;
+    if(!strcmp(filename, __MODULE_PMM_DEFAULT_) && LOG_PMM_ON) return 1;
+    /* pmm end */
+    if(!strcmp(filename, __MODULE_VMM_) && LOG_VMM_ON) return 1;
+    if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
+    if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;
+    if(!strcmp(filename, __MODULE_TRAP_) && LOG_TRAP_ON) return 1;
+    if(!strcmp(filename, __MODULE_SCHED_) && LOG_SCHED_ON) return 1;
+    if(!strcmp(filename, __MODULE_PROC_) && LOG_PROC_ON) return 1;
+    if(!strcmp(filename, __MODULE_IDE_) && LOG_IDE_ON) return 1;
+    return 0;
+}

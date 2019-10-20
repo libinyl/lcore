@@ -2,6 +2,7 @@
 #include <monitor.h>
 #include <kmalloc.h>
 #include <assert.h>
+#include <kdebug.h>
 
 
 // Initialize monitor.

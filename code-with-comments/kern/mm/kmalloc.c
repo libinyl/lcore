@@ -6,6 +6,7 @@
 #include <sync.h>
 #include <pmm.h>
 #include <stdio.h>
+#include <kdebug.h>
 
 /*
  * SLOB Allocator: Simple List Of Blocks

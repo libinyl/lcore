@@ -6,6 +6,7 @@
 #include <ide.h>
 #include <x86.h>
 #include <assert.h>
+#include <kdebug.h>
 
 /*
  * 磁盘设备驱动

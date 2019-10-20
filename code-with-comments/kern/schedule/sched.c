@@ -4,6 +4,7 @@
 #include <sched.h>
 #include <stdio.h>
 #include <assert.h>
+#include <kdebug.h>
 #include <default_sched.h>
 
 static list_entry_t timer_list;
@@ -64,7 +65,7 @@ sched_init(void) {
 
     rq = &__rq;
     rq->max_time_slice = 5;
-    LOG_TAB("\t数值 max_time_slice = %u\n", rq->max_time_slice);
+    LOG_TAB("\tmax_time_slice = %u\n", rq->max_time_slice);
     sched_class->init(rq);
 
     LOG_TAB("sched class: %s\n", sched_class->name);
@@ -83,13 +84,17 @@ sched_init(void) {
  */ 
 void
 wakeup_proc(struct proc_struct *proc) {
+    LOG("wakeup_proc start:\n");
     assert(proc->state != PROC_ZOMBIE);
+    LOG_TAB("已确认此进程不是僵尸进程\n");
     bool intr_flag;
     local_intr_save(intr_flag);
     {
         if (proc->state != PROC_RUNNABLE) {
             proc->state = PROC_RUNNABLE;
             proc->wait_state = 0;
+            LOG_TAB("已将此进程不是僵尸进程\n");
+
             if (proc != current) {
                 sched_class_enqueue(proc);
             }
@@ -99,6 +104,7 @@ wakeup_proc(struct proc_struct *proc) {
         }
     }
     local_intr_restore(intr_flag);
+    LOG("wakeup_proc end.\n");
 }
 
 /**

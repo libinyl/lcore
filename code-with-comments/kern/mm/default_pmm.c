@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <default_pmm.h>
+#include <kdebug.h>
 
 /**
  * "first fit"内存分配算法.

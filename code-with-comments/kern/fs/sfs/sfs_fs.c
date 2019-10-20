@@ -12,6 +12,7 @@
 #include <bitmap.h>
 #include <error.h>
 #include <assert.h>
+#include <kdebug.h>
 
 
 // 来自 OS161.

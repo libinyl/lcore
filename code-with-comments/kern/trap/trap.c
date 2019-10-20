@@ -46,6 +46,7 @@ idt_init(void) {
      * 中断处理函数的入口地址定义在__vectors,位于kern/trap/vector.S
      */ 
     logline("初始化开始:中断向量表");
+    LOG("idt_init:\n\n");
 
     extern uintptr_t __vectors[];
     int i;
@@ -69,7 +70,7 @@ idt_init(void) {
             LOG_TAB("%d",idt[i].gd_dpl);
             LOG("\n");
             if(i != sizeof(idt) / sizeof(struct gatedesc) -1)
-                LOG_TAB("...\tnt...\t\t...\t\t0\n");
+                LOG_TAB("...\tn\t...\t\t...\t\t0\n");
         }
     }
 

@@ -7,6 +7,7 @@
 #include <trap.h>
 #include <memlayout.h>
 #include <sync.h>
+#include <kdebug.h>
 
 /* stupid I/O delay routine necessitated by historical PC design flaws */
 static void
