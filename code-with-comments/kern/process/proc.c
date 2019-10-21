@@ -192,7 +192,9 @@ remove_links(struct proc_struct *proc) {
     nr_process --;
 }
 
-// get_pid - alloc a unique pid for process
+/**
+ * 为进程分配一个全剧唯一(?)的 pid
+ */ 
 static int
 get_pid(void) {
     static_assert(MAX_PID > MAX_PROCESS);

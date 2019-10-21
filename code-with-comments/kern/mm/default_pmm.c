@@ -116,7 +116,7 @@ default_init_memmap(struct Page *base, size_t n) {
     SetPageProperty(base);
     nr_free += n;
     list_add_before(&free_list, &(base->page_link));
-    LOG_TAB("\tdefault_init_memmap:\n");
+    LOG_TAB("\tdefault_init_memmap: 空闲空间管理\n");
     LOG_TAB("\t\t已将一块连续地址空间加入 freelist,起始: 0x%08lx, page 数:%d.\n", base, n);
     LOG_TAB("\t\t当前空闲 page 数:%d\n", nr_free);
 }

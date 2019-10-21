@@ -3,7 +3,10 @@
 
 #include <sched.h>
 
-extern struct sched_class default_sched_class;
+/**
+ * 将 rr 调度器类暴露出来,作为向外提供的接口,供 sched.c 配置
+ */ 
+extern struct sched_class RR_sched_class;
 
 #endif /* !__KERN_SCHEDULE_SCHED_RR_H__ */
 

@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include <kdebug.h>
-#include <default_sched.h>
+#include <stride_sched.h>
+#include <rr_sched.h>
 
 static list_entry_t timer_list;
 
@@ -61,7 +62,8 @@ sched_init(void) {
 
     list_init(&timer_list);
 
-    sched_class = &default_sched_class;
+    //sched_class = &stride_sched_class;
+    sched_class = &RR_sched_class;
 
     rq = &__rq;
     rq->max_time_slice = 5;

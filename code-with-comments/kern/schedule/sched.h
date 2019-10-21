@@ -30,6 +30,7 @@ timer_init(timer_t *timer, struct proc_struct *proc, int expires) {
 struct run_queue;
 
 // 调度器类的设计借鉴了 linux 的设计思想,扩展性很强.这些类封装了调度策略.
+// 参考: https://www.cnblogs.com/vamei/archive/2018/07/25/9364382.html
 struct sched_class {
     // the name of sched_class
     const char *name;
@@ -53,7 +54,7 @@ struct sched_class {
 };
 
 /**
- * 就绪队列,每个在用户看来都是正在运行,不断地切换上下文
+ * 就绪队列, 在用户看来都是正在运行,不断地切换上下文
  */ 
 struct run_queue {
     list_entry_t run_list;
