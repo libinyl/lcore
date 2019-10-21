@@ -32,7 +32,7 @@ static void check_swap(void);
 int
 swap_init(void)
 {
-     logline("初始化开始:交换分区");
+     LOG_LINE("初始化开始:交换分区");
 
      swapfs_init();
 
@@ -52,7 +52,7 @@ swap_init(void)
           check_swap();
      }
 
-     logline("初始化完毕:交换分区");
+     LOG_LINE("初始化完毕:交换分区");
      return r;
 }
 

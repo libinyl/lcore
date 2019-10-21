@@ -146,7 +146,7 @@ load_esp0(uintptr_t esp0) {
  */ 
 static void
 gdt_init(void) {
-    logline("初始化开始: 全局段描述表&TSS");
+    LOG_LINE("初始化开始: 全局段描述表&TSS");
     LOG_TAB("1. 设置内存中的 ts 结构 ts.ts_esp0 = bootstacktop\n");
     LOG_TAB("2. 设置内存中的 ts 结构 ts.ts_ss0 = KERNEL_DS\n");
     LOG_TAB("3. 设置 GDT 表中的 TSS 一项, 维护内存 ts 地址\n");
@@ -168,7 +168,7 @@ gdt_init(void) {
 
     //  加载 TSS 段选择子到 TR 寄存器
     ltr(GD_TSS);
-    logline("初始化完毕: 全局段描述表&TSS");
+    LOG_LINE("初始化完毕: 全局段描述表&TSS");
 }
 
 //init_pmm_manager - 配置一个内存管理器实例
@@ -241,7 +241,7 @@ nr_free_pages(void) {
  */
 static void
 page_init(void) {
-    logline("初始化开始:内存分页记账");
+    LOG_LINE("初始化开始:内存分页记账");
     LOG("目标: 根据探测得到的物理空间分布,初始化 pages 表格.\n\n");
     LOG_TAB("1. 确定 pages 基址. 通过 ends 向上取整得到, 位于 end 之上, 这意味着从此就已经突破了内核文件本身的内存空间,开始动态分配内存\n");
     LOG_TAB("2. 确定 page 数 npages,即 可管理内存的页数.\n");
@@ -321,7 +321,7 @@ page_init(void) {
             LOG_TAB("此区间不可用, 原因: BIOS 认定非可用内存.\n");
         }
     }
-    logline("初始化完毕: 内存分页记账");
+    LOG_LINE("初始化完毕: 内存分页记账");
 }
 
 //boot_map_segment - setup&enable the paging mechanism
@@ -344,7 +344,7 @@ page_init(void) {
  */ 
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
-    logline("开始: 内核区域映射");
+    LOG_LINE("开始: 内核区域映射");
 
     //LOG_TAB("一级页表地址:0x%08lx\n",pgdir);
     LOG_TAB("映射区间[0x%08lx,0x%08lx + 0x%08lx ) => [0x%08lx, 0x%08lx + 0x%08lx )\n", la, la, size, pa, pa, size);
@@ -364,7 +364,7 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
     }
     LOG_TAB("映射完毕, 直接按照可管理内存上限映射. 虚存对一级页表比例: [KERNBASE, KERNBASE + KMEMSIZE) <=> [768, 896) <=> [3/4, 7/8)\n");
     
-    logline("完毕: 内核区域映射");
+    LOG_LINE("完毕: 内核区域映射");
 }
 
 //boot_alloc_page - allocate one page using pmm->alloc_pages(1) 
@@ -384,7 +384,7 @@ boot_alloc_page(void) {
 void
 pmm_init(void) {
     // print_bootPD(); //1024 个一级页表项,只有
-    logline("初始化开始:内存管理模块");
+    LOG_LINE("初始化开始:内存管理模块");
     LOG("目标: 建立完整的虚拟内存机制.\n");
 
 
@@ -434,7 +434,7 @@ pmm_init(void) {
     print_pgdir();
     
     kmalloc_init();
-    logline("初始化完毕:内存管理模块");
+    LOG_LINE("初始化完毕:内存管理模块");
 }
 
 //get_pte - get pte and return the kernel virtual address of this pte for la
@@ -884,7 +884,8 @@ print_pgdir(void) {
 }
 
 void
-print_all_pt(pde_t *pt_base) {
+print_all_pt(pte_t *pt_base) {
+    _NO_LOG_START
     LOG("\n一级页表内容:\n\n");
     LOG_TAB("索引\t二级页表物理基址\t存在位\t读写性\t特权级\n");
     for(int i = 1023; i >= 0; -- i){
@@ -893,11 +894,12 @@ print_all_pt(pde_t *pt_base) {
             LOG_TAB("%u", i);
             LOG_TAB("0x%08lx", (*pdep) & ~0xFFF );
             LOG_TAB("\t%u",(*pdep) & 1);
-            LOG_TAB("%s",(*pdep) & 1<<1 == 0 ? "r":"rw");
-            LOG_TAB("%s\n",(*pdep) & 1<<2 == 0 ? "s":"u");
+            LOG_TAB("%s",((*pdep) & 1<<1) == 0 ? "r":"rw");
+            LOG_TAB("%s\n",((*pdep) & 1<<2) == 0 ? "s":"u");
         }
     }
     LOG("\n");
+    _NO_LOG_END
 }
 
 

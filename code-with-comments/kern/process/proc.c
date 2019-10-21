@@ -1215,7 +1215,7 @@ init_main(void *arg) {
 void
 proc_init(void) {
     
-    logline("初始化开始: 内核线程");
+    LOG_LINE("初始化开始: 内核线程");
     LOG("proc_init begin:\n");
     LOG_TAB("初始化队列: proc_list\n");
 

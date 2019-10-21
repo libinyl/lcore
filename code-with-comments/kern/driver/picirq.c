@@ -1,7 +1,7 @@
 #include <defs.h>
 #include <x86.h>
 #include <picirq.h>
-#include <stdio.h>
+#include <kdebug.h>
 
 // I/O Addresses of the two programmable interrupt controllers
 #define IO_PIC1             0x20    // Master (IRQs 0-7)
@@ -83,6 +83,6 @@ pic_init(void) {
     if (irq_mask != 0xFFFF) {
         pic_setmask(irq_mask);
     }
-    logline("初始化完毕:中断控制器");
+    LOG_LINE("初始化完毕:中断控制器");
 }
 

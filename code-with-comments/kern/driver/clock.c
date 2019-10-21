@@ -2,7 +2,7 @@
 #include <trap.h>
 #include <stdio.h>
 #include <picirq.h>
-
+#include <kdebug.h>
 /* *
  * 时间相关硬件的函数封装 - 8253 时钟控制器,
  * 在 IRQ-0 生成中断.
@@ -48,7 +48,7 @@ long SYSTEM_READ_TIMER( void ){
  * */
 void
 clock_init(void) {
-    logline("初始化开始:时钟控制器");
+    LOG_LINE("初始化开始:时钟控制器");
 
     // set 8253 timer-chip
     outb(TIMER_MODE, TIMER_SEL0 | TIMER_RATEGEN | TIMER_16BIT);
@@ -59,6 +59,6 @@ clock_init(void) {
     // initialize time counter 'ticks' to zero
     ticks = 0;
     pic_enable(IRQ_TIMER);
-    logline("初始化完毕:时钟控制器");
+    LOG_LINE("初始化完毕:时钟控制器");
 }
 

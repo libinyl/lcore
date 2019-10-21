@@ -263,7 +263,7 @@ debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info) {
 
 void
 print_history(void) {
-    logline("历史过程");
+    LOG_LINE("历史过程");
     LOG("CPU上电,BIOS 自检\n");
     LOG("BIOS 从 #0 sector 把 bootloader 加载到 0x7c00 并执行\n\n");
     LOG("bootloader:\n");
@@ -294,7 +294,7 @@ print_kerninfo(void) {
 
     extern char etext[], edata[], end[], kern_init[];
 
-    logline("内核设计规格");
+    LOG_LINE("内核设计规格");
 
     LOG_KER_SYM_INFO("text start", KER_TEXT_START);
     LOG_KER_SYM_INFO("entry", kern_init);
@@ -403,6 +403,7 @@ print_stackframe(void) {
     }
 }
 
+/********************* 日志控制 *********************/
 
 int
 log(const char *fmt, ...) {
@@ -414,26 +415,62 @@ log(const char *fmt, ...) {
     return cnt;
 }
 
-void logline(const char *str) {
-    if (LOG_LINE_ON)
-        cprintf("\n\n--------------%s--------------\n\n",str);
+#define MODULE_GLOBAL 0
+#define MODULE_INIT 1
+#define MODULE_MEMORY 2
+#define MODULE_TRAP 3
+#define MODULE_SYNC 4
+#define MODULE_PROCESS 5
+#define MODULE_FS 6
+#define MODULE_DRIVER 7
+#define MODULE_SYSCALL 8
+#define MODULE_SCHEDULE 9
+#define MODULE_DEBUG 10
+
+int _will_log = 1;
+struct log_ctl_entry{
+    const char *mod_name;
+    int is_log_on;
+};
+
+static struct log_ctl_entry log_ctl_tb[] = {
+
+    #define LOG_CTL_ENTRY(name, log_on)\
+    (struct log_ctl_entry){\
+        .mod_name = name,\
+        .is_log_on = log_on,\
+    }
+
+    [MODULE_GLOBAL]     = LOG_CTL_ENTRY("kern",IS_LOG_GLOBAL_ON),
+    [MODULE_INIT]       = LOG_CTL_ENTRY("kern/init",IS_LOG_INIT_ON),
+    [MODULE_MEMORY]     = LOG_CTL_ENTRY("kern/mm",IS_LOG_MEMORY_ON),
+    [MODULE_TRAP]       = LOG_CTL_ENTRY("kern/trap",IS_LOG_TRAP_ON),
+    [MODULE_SYNC]       = LOG_CTL_ENTRY("kern/sync",IS_LOG_SYNC_ON),
+    [MODULE_PROCESS]    = LOG_CTL_ENTRY("kern/process",IS_LOG_PROCESS_ON),
+    [MODULE_FS]         = LOG_CTL_ENTRY("kern/fs",IS_LOG_FS_ON),
+    [MODULE_DRIVER]     = LOG_CTL_ENTRY("kern/driver",IS_LOG_DRIVER_ON),
+    [MODULE_SYSCALL]    = LOG_CTL_ENTRY("kern/syscall",IS_LOG_SYSCALL_ON),
+    [MODULE_SCHEDULE]   = LOG_CTL_ENTRY("kern/schedule",IS_LOG_SCHEDULE_ON),
+    [MODULE_DEBUG]      = LOG_CTL_ENTRY("kern/debug",IS_LOG_DEBUG_ON),
+};
+
+static struct log_ctl_entry*
+get_ctl_entry(const char *mod_name){
+    if(!mod_name) return NULL;
+    for(int i = 0; i < sizeof(log_ctl_tb)/sizeof(struct log_ctl_entry); ++i ){
+        if(!strncmp(log_ctl_tb[i].mod_name, mod_name, strlen(log_ctl_tb[i].mod_name))){
+            return &log_ctl_tb[i];
+        }
+    }
+    return NULL;
 }
 
-// todo: 用宏代替 logcheck 函数, 尽可能更简洁一点?
+/**
+ * return 1, if check passed; otherwise 0.
+ */ 
 int
 log_check(const char *filename){
-    if(!LOG_MODULE_ALL_ON) return 0;    // 总控
-    if(!strcmp(filename, __MODULE_INIT_) && LOG_INIT_ON) return 1;
-    /* pmm begin */
-    if(!strcmp(filename, __MODULE_PMM_) && LOG_PMM_ON) return 1;
-    if(!strcmp(filename, __MODULE_PMM_DEFAULT_) && LOG_PMM_ON) return 1;
-    /* pmm end */
-    if(!strcmp(filename, __MODULE_VMM_) && LOG_VMM_ON) return 1;
-    if(!strcmp(filename, __MODULE_DEBUG_) && LOG_DEBUG_ON) return 1;
-    if(!strcmp(filename, __MODULE_COS_) && LOG_COS_ON) return 1;
-    if(!strcmp(filename, __MODULE_TRAP_) && LOG_TRAP_ON) return 1;
-    if(!strcmp(filename, __MODULE_SCHED_) && LOG_SCHED_ON) return 1;
-    if(!strcmp(filename, __MODULE_PROC_) && LOG_PROC_ON) return 1;
-    if(!strcmp(filename, __MODULE_IDE_) && LOG_IDE_ON) return 1;
-    return 0;
+    struct log_ctl_entry* e = get_ctl_entry(filename);
+    if(!e) return 0;
+    return e->is_log_on;
 }

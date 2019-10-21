@@ -50,6 +50,7 @@ struct sched_class {
     struct proc_struct *(*pick_next)(struct run_queue *rq);
     // dealer of the time-tick
     void (*proc_tick)(struct run_queue *rq, struct proc_struct *proc);
+    
     /* for SMP support in the future
      *  load_balance
      *     void (*load_balance)(struct rq* rq);

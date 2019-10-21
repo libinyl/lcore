@@ -45,7 +45,7 @@ idt_init(void) {
     /**
      * 中断处理函数的入口地址定义在__vectors,位于kern/trap/vector.S
      */ 
-    logline("初始化开始:中断向量表");
+    LOG_LINE("初始化开始:中断向量表");
     LOG("idt_init:\n\n");
 
     extern uintptr_t __vectors[];
@@ -74,7 +74,7 @@ idt_init(void) {
         }
     }
 
-    logline("初始化完毕:中断向量表");
+    LOG_LINE("初始化完毕:中断向量表");
 }
 
 /**

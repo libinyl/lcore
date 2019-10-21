@@ -5,48 +5,57 @@
 #include <trap.h>
 
 
+
 /**
- * 简单的日志控制
- * 
- * todo: 每增加 1 个模块,需要修改三处代码: 开关本身;模块名称;log_check. 待优化
+ * 日志控制优化:
+ * 0) 行日志开关
+ * 1) 模块级日志开关: 视 kern 下一个文件夹为一个模块, 对应宏置零即可关闭
+ * 2) 区域日志开关: 如果想屏蔽对某个区域的日志, 只需用 _NO_LOG_START 和_NO_LOG_END包裹区域即可.
+ *    这两个宏已配置为必须成对出现,否则无法编译通过.
  */ 
+#define LOG_LINE_ON 0           // 行打印开关,即"---xxx---"形式的开关
 
-#define LOG_ALL_ON 1           // 日志总控开关,应该保持开启
+#define IS_LOG_GLOBAL_ON 0  // 日志总控(不含LOG_LINE)
+#define IS_LOG_INIT_ON 1
+#define IS_LOG_MEMORY_ON 1
+#define IS_LOG_TRAP_ON 1
+#define IS_LOG_SYNC_ON 1
+#define IS_LOG_PROCESS_ON 1
+#define IS_LOG_FS_ON 1
+#define IS_LOG_DRIVER_ON 1
+#define IS_LOG_SYSCALL_ON 1
+#define IS_LOG_SCHEDULE_ON 1
+#define IS_LOG_DEBUG_ON 1
 
-#define LOG_LINE_ON 1           // 行打印开关
-#define LOG_MODULE_ALL_ON 1     // 模块日志总开关
+extern int _will_log;
+extern int log(const char *fmt, ...);
+extern int log_check(const char *filename);
+extern int cprintf(const char *fmt, ...);
 
-#define LOG_INIT_ON  1         // init 模块开关
-#define LOG_DEBUG_ON 1          // debug 模块开关
-#define LOG_PMM_ON 1            // 物理内存管理模块开关
-#define LOG_VMM_ON 1            // vmm 模块开关
-#define LOG_COS_ON 1            // console 模块开关
-#define LOG_TRAP_ON 1            // 中断模块开关
-#define LOG_SCHED_ON 1            // 调度模块开关
-#define LOG_PROC_ON 1            // 进程模块开关
-#define LOG_IDE_ON 1             // 磁盘模块开关
+#define _NO_LOG_START\
+    {\
+        do{_will_log = 0;}while(0);
 
+#define _NO_LOG_END\
+        do{_will_log = 1;}while(0);\
+    }
 
-#define __MODULE_INIT_  "kern/init/init.c"
-#define __MODULE_DEBUG_  "kern/debug/kdebug.c"
-#define __MODULE_PMM_   "kern/mm/pmm.c"
-#define __MODULE_PMM_DEFAULT_   "kern/mm/default_pmm.c"
-#define __MODULE_VMM_   "kern/mm/vmm.c"
-#define __MODULE_COS_   "kern/driver/console.c"
-#define __MODULE_TRAP_   "kern/trap/trap.c"
-#define __MODULE_SCHED_   "kern/schedule/sched.c"
-#define __MODULE_PROC_   "kern/process/proc.c"
-#define __MODULE_IDE_   "kern/process/proc.c"
+#define LOG(_LOG_STR, ...)\
+        do{\
+            if(_will_log && log_check(__FILE__)){\
+                log(_LOG_STR, ##__VA_ARGS__);\
+            }\
+        }while(0)
 
 #define LOG_TAB(_LOG_STR, ...)\
     LOG("\t"_LOG_STR, ##__VA_ARGS__)
 
-#define LOG(_LOG_STR, ...)\
-        do{\
-            if(log_check(__FILE__)){\
-                log(_LOG_STR, ##__VA_ARGS__);\
-            }\
-        }while(0)
+// 行打印, 行如"-------xxx---------"
+#define LOG_LINE(_LOG_STR)\
+    do{\
+        if (LOG_LINE_ON)\
+        cprintf("\n\n--------------"_LOG_STR"--------------\n\n");\
+    }while(0)
 
 void print_history(void);
 void print_kerninfo(void);

@@ -260,9 +260,9 @@ copy_to_user(struct mm_struct *mm, void *dst, const void *src, size_t len) {
 //          - now just call check_vmm to check correctness of vmm
 void
 vmm_init(void) {
-    logline("测试开始:虚拟内存管理模块(vmm)");
+    LOG_LINE("测试开始:虚拟内存管理模块(vmm)");
     check_vmm();
-    logline("测试结束:虚拟内存管理模块(vmm)");
+    LOG_LINE("测试结束:虚拟内存管理模块(vmm)");
 
 }
 
@@ -348,7 +348,7 @@ struct mm_struct *check_mm_struct;  // 当前ucore 认为的合法虚拟内存�
 // check_pgfault - pgfault handler 测试函数
 static void
 check_pgfault(void) {
-    logline("开始测试: page fault");
+    LOG_LINE("开始测试: page fault");
     LOG("   当前页表状态:\n");
     print_pgdir();
 
@@ -396,7 +396,7 @@ check_pgfault(void) {
 
     assert(nr_free_pages_store == nr_free_pages());
 
-    logline("测试通过: page fault");
+    LOG_LINE("测试通过: page fault");
 }
 //page fault number
 volatile unsigned int pgfault_num=0;
