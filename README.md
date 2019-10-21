@@ -475,7 +475,7 @@ user sh is running!!!
 
 ## 日志开关
 
-位于 `stdio.h`
+位于 `kdebug.h`
 
 ## todo
 

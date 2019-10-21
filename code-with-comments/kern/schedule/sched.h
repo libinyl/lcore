@@ -5,6 +5,12 @@
 #include <list.h>
 #include <skew_heap.h>
 
+//todo: 更优雅的策略配置方式?
+#define _SCHED_POLICY_ _SCHED_RR_
+
+#define _SCHED_RR_ 0
+#define _SCHED_STRIDE_ 1
+
 struct proc_struct;
 
 /**

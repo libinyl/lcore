@@ -12,6 +12,14 @@ static list_entry_t timer_list;
 
 static struct sched_class *sched_class;
 
+/**
+ * 调度策略表
+ */ 
+static struct sched_class* sched_class_tb[] = {
+    [_SCHED_RR_] = &RR_sched_class,
+    [_SCHED_STRIDE_] = &stride_sched_class
+};
+
 static struct run_queue *rq;
 
 /**
@@ -62,8 +70,7 @@ sched_init(void) {
 
     list_init(&timer_list);
 
-    //sched_class = &stride_sched_class;
-    sched_class = &RR_sched_class;
+    sched_class = sched_class_tb[_SCHED_POLICY_];
 
     rq = &__rq;
     rq->max_time_slice = 5;
