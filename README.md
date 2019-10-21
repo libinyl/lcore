@@ -473,9 +473,12 @@ do_sleep:
 user sh is running!!!
 ```
 
-## 日志开关
+## 可配置项
 
-位于 `kdebug.h`
+配置项 | 路径
+----|---
+日志控制 | `kern/debug/kdebug.h`
+调度策略配置 | `kern/schedule/sched.h`
 
 ## todo
 
