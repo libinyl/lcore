@@ -93,7 +93,7 @@ wakeup_proc(struct proc_struct *proc) {
         if (proc->state != PROC_RUNNABLE) {
             proc->state = PROC_RUNNABLE;
             proc->wait_state = 0;
-            LOG_TAB("已将此进程不是僵尸进程\n");
+            LOG_TAB("进程状态更新为: PROC_RUNNABLE, wait_state = 0\n");
 
             if (proc != current) {
                 sched_class_enqueue(proc);

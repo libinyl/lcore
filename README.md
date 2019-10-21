@@ -1,4 +1,4 @@
-## lcore - a simple toy OS
+## lcore - ucore with log & comments
 
 *inspired by ucore*
 

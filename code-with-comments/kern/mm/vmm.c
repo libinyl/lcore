@@ -428,9 +428,11 @@ volatile unsigned int pgfault_num=0;
  */
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
-    LOG("do_pgfault:  分析并处理缺页.");
-    LOG("cpu 已将触发异常的地址置于 cr2 寄存器,值为: x%08lx.\n",addr);
-    LOG("此异常错误码: %d\n",error_code);
+    LOG("do_pgfault begin:\n");
+    LOG("page fault信息:\n");
+    LOG_TAB("mm: 0x%08lx\n", mm);
+    LOG_TAB("地址: 0x%08lx\n", addr);
+    LOG("此异常错误码: 0x%08lx\n",error_code);
 
     int ret = -E_INVAL;
     // 找到此地址所在的 vma

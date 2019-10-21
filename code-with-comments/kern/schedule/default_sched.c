@@ -3,6 +3,7 @@
 #include <proc.h>
 #include <assert.h>
 #include <default_sched.h>
+#include <kdebug.h>
 
 #define USE_SKEW_HEAP 1
 
@@ -56,6 +57,7 @@ stride_init(struct run_queue *rq) {
  */
 static void
 stride_enqueue(struct run_queue *rq, struct proc_struct *proc) {
+     LOG("stride_enqueue start:");
      /* LAB6: YOUR CODE */
 #if USE_SKEW_HEAP
      rq->lab6_run_pool =
@@ -69,6 +71,7 @@ stride_enqueue(struct run_queue *rq, struct proc_struct *proc) {
      }
      proc->rq = rq;
      rq->proc_num ++;
+     LOG("stride_enqueue end:");
 }
 
 /*

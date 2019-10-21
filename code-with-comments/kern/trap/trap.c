@@ -168,14 +168,14 @@ print_regs(struct pushregs *regs) {
 
 static inline void
 print_pgfault(struct trapframe *tf) {
-    LOG("缺页异常信息:\n");
+    LOG("缺页异常详细信息:\n");
 
     /* error_code:
      * bit 0 == 0 means no page found, 1 means protection fault
      * bit 1 == 0 means read, 1 means write
      * bit 2 == 0 means kernel, 1 means user
      * */
-    LOG("   page fault at 0x%08x,解析错误码,得到触发原因: %c/%c [%s].\n", rcr2(),
+    LOG_TAB("page fault at 0x%08x,解析错误码,得到触发原因: %c/%c [%s].\n", rcr2(),
             (tf->tf_err & 4) ? 'U' : 'K',
             (tf->tf_err & 2) ? 'W' : 'R',
             (tf->tf_err & 1) ? "protection fault" : "no page found");
@@ -200,7 +200,8 @@ print_pgfault(struct trapframe *tf) {
  */ 
 static int
 pgfault_handler(struct trapframe *tf) {
-    LOG("pgfault_handler: 开始处理缺页;\n");
+    LOG("pgfault_handler begin:\n");
+    LOG_TAB("开始确定 mm_struct\n");
 
     extern struct mm_struct *check_mm_struct;
     if(check_mm_struct !=NULL) { //used for test check_swap
@@ -210,6 +211,7 @@ pgfault_handler(struct trapframe *tf) {
     if (check_mm_struct != NULL) {
         assert(current == idleproc);
         mm = check_mm_struct;
+        LOG_TAB("检测到 check_mm_struct, 设置 mm = check_mm_struct\n");
     }
     else {
         if (current == NULL) {
@@ -218,8 +220,12 @@ pgfault_handler(struct trapframe *tf) {
             panic("unhandled page fault.\n");
         }
         mm = current->mm;
+        LOG_TAB("设置 mm = current->mm\n");
+        
     }
-    LOG("已获取触发缺页的 mm_struct\n");
+    LOG_TAB("mm_struct 确定完毕\n");
+    LOG_TAB("page fault 错误码 tf->tf_err = 0x%08lx\n", tf->tf_err);
+    LOG_TAB("page fault 异常地址: 0x%08lx", rcr2());
     return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
@@ -228,6 +234,7 @@ extern struct mm_struct *check_mm_struct;
 
 static void
 trap_dispatch(struct trapframe *tf) {
+    //LOG("trap_dispatch start:\n");
     //LOG("开始分发中断.中断号:%u\n",tf->tf_trapno);
     char c;
 
@@ -309,6 +316,7 @@ trap_dispatch(struct trapframe *tf) {
         panic("unexpected trap in kernel.\n");
 
     }
+    //LOG("trap_dispatch end\n");
 }
 
 /**

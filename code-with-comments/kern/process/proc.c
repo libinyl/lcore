@@ -299,6 +299,7 @@ find_proc(int pid) {
 //      构造新的内核态的 trapframe,用于 do_fork 中复制.
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
+    LOG("\nkernel_thread begin:\n");
     struct trapframe tf;
     memset(&tf, 0, sizeof(struct trapframe));
     // 初始化内核中断帧
@@ -308,14 +309,12 @@ kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     tf.tf_regs.reg_edx = (uint32_t)arg;
     tf.tf_eip = (uint32_t)kernel_thread_entry;      // 内核线程入口点
 
-
-    LOG("\nkernel_thread begin:\n");
     LOG_TAB("为 do_fork 准备 trapframe:\n");
     LOG_TAB("代码段选择子: 0x%08lx\n",KERNEL_CS);
     LOG_TAB("数据段选择子: 0x%08lx\n",KERNEL_DS);
     LOG_TAB("该内核线程起始地址初始化: 0x%08lx\n",(uintptr_t *)fn);
     LOG_TAB("入口点初始化 :0x%08lx\n",kernel_thread_entry);
-    LOG("trapframe准备完毕,即将进入 do_fork:\n");
+    LOG("trapframe准备完毕,即将进入 do_fork. 指定选项: CLONE_VM.\n");
 
     return do_fork(clone_flags | CLONE_VM, 0, &tf);
 }
@@ -1215,7 +1214,7 @@ void
 proc_init(void) {
     
     logline("初始化开始: 内核线程");
-    LOG("proc_init:\n");
+    LOG("proc_init begin:\n");
     LOG_TAB("初始化队列: proc_list\n");
 
     int i;
@@ -1254,7 +1253,7 @@ proc_init(void) {
     LOG_TAB("current 进程pid: %s\n",idleproc->name);
 
     int pid = kernel_thread(init_main, NULL, 0);
-    LOG("kernel_thread返回 pid:%d\n", pid);
+    LOG_TAB("kernel_thread返回 pid:%d\n", pid);
     if (pid <= 0) {
         panic("create init_main failed.\n");
     }
@@ -1264,6 +1263,7 @@ proc_init(void) {
 
     assert(idleproc != NULL && idleproc->pid == 0);
     assert(initproc != NULL && initproc->pid == 1);
+    LOG("proc_init end\n");
 
 
 }
