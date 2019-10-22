@@ -53,12 +53,15 @@ clock_init(void) {
     // set 8253 timer-chip
     outb(TIMER_MODE, TIMER_SEL0 | TIMER_RATEGEN | TIMER_16BIT);
     // 装入计数器初值
-    outb(IO_TIMER1, TIMER_DIV(100) % 256);
-    outb(IO_TIMER1, TIMER_DIV(100) / 256);
+    int times_per_second = 100;// ms
+    outb(IO_TIMER1, TIMER_DIV(times_per_second) % 256);
+    outb(IO_TIMER1, TIMER_DIV(times_per_second) / 256);
 
     // initialize time counter 'ticks' to zero
     ticks = 0;
     pic_enable(IRQ_TIMER);
+    LOG("clock_init:\n");
+    LOG_TAB("每秒脉冲次数:%d\n", times_per_second);
     LOG_LINE("初始化完毕:时钟控制器");
 }
 

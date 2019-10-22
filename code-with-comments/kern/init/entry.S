@@ -1,5 +1,7 @@
 # 直到建立虚拟地址空间之前, 地址的访问都是按照在 bootasm.S 设置的段映射关系,且在 bootloader 中elf 加载时做了变换,否则无法执行如此高地址的代码.
 # 参考 lab2 附录 C
+# 事实上,这个 entry.S 就已经定义了内核的整体结构--代码段,数据段等.
+# memlayout.h 则更完整地描述了包含用户态程序地址的结构.
 # 汇编指令可参考 https://docs.oracle.com/cd/E26502_01/html/E28388/eoiyg.html
 
 #include <mmu.h>
@@ -101,6 +103,7 @@ __second_PDE:
 # 每项的内容: 从 0 开始,每项的值递增 4096,即 i * PGSIZE,辅以属性
 .set i, 0
 __boot_pt1:
+.globl __boot_pt1
 .rept 1024
     .long i * PGSIZE + (PTE_P | PTE_W)
     .set i, i + 1

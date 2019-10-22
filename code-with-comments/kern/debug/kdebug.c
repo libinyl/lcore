@@ -17,7 +17,11 @@
 #define M_SIZE (K_SIZE * K_SIZE)
 
 #define LOG_KER_SYM_INFO(prefix, sym_name)\
-    LOG("\t%-20s: \t0x%08x = %u M + %uK\n", prefix, sym_name, KERNBASE/M_SIZE, ((unsigned int)sym_name - KERNBASE)/K_SIZE)
+    LOG_TAB("%-20s: \t0x%08x = %u M + %uK\n", (prefix), (sym_name), KERNBASE/M_SIZE, ((unsigned int)sym_name - KERNBASE)/K_SIZE)
+
+#define LOG_KER_SYM_INFO_TAB(prefix, sym_name)\
+    LOG("\t");\
+    LOG_KER_SYM_INFO(prefix, sym_name)
 
 
 extern const struct stab __STAB_BEGIN__[];  // beginning of stabs table
@@ -292,15 +296,21 @@ print_history(void) {
 void
 print_kerninfo(void) {
 
-    extern char etext[], edata[], end[], kern_init[];
+    extern char etext[], edata[], end[], kern_entry[], kern_init[], bootstack[], bootstacktop[], __boot_pt1[],__boot_pgdir[];
 
-    LOG_LINE("内核设计规格");
-
-    LOG_KER_SYM_INFO("text start", KER_TEXT_START);
-    LOG_KER_SYM_INFO("entry", kern_init);
-    LOG_KER_SYM_INFO("etext", etext);
+    LOG_LINE("内核地址空间布局框架");
+    LOG_KER_SYM_INFO("end", end);
     LOG_KER_SYM_INFO("edata", edata);
-    LOG_KER_SYM_INFO("end(.bss 结束))", end);
+    LOG_KER_SYM_INFO("[0, 4M) pt end", __boot_pt1 + 1024 * sizeof(uint32_t));
+    LOG_KER_SYM_INFO("[0, 4M) pt begin", __boot_pt1);
+    LOG_KER_SYM_INFO("global pd end", __boot_pt1);
+    LOG_KER_SYM_INFO("global pd begin", __boot_pgdir);    
+    LOG_KER_SYM_INFO("bootstacktop", bootstacktop);    
+    LOG_KER_SYM_INFO("bootstack", bootstack);    
+    LOG_KER_SYM_INFO("etext", etext);
+    LOG_KER_SYM_INFO("kern_init", kern_init);
+    LOG_KER_SYM_INFO("kern_entry", kern_entry);
+    LOG_KER_SYM_INFO("text start", KER_TEXT_START);
 
     LOG_TAB("%s\t:\t%uMB\n","内核文件预计占用最大内存",4);
     LOG_TAB("%s\t\t:\t%d KB\n", "内核文件实际占用内存", (end - kern_init + 1023)/1024);
@@ -415,17 +425,18 @@ log(const char *fmt, ...) {
     return cnt;
 }
 
-#define MODULE_GLOBAL 0
-#define MODULE_INIT 1
-#define MODULE_MEMORY 2
-#define MODULE_TRAP 3
-#define MODULE_SYNC 4
-#define MODULE_PROCESS 5
-#define MODULE_FS 6
-#define MODULE_DRIVER 7
-#define MODULE_SYSCALL 8
-#define MODULE_SCHEDULE 9
-#define MODULE_DEBUG 10
+#define MODULE_INIT 0
+#define MODULE_MEMORY 1
+#define MODULE_TRAP 2
+#define MODULE_SYNC 3
+#define MODULE_PROCESS 4
+#define MODULE_FS 5
+#define MODULE_DRIVER 6
+#define MODULE_SYSCALL 7
+#define MODULE_SCHEDULE 8
+#define MODULE_DEBUG 9
+#define MODULE_GLOBAL 10
+
 
 int _will_log = 1;
 struct log_ctl_entry{
@@ -441,7 +452,6 @@ static struct log_ctl_entry log_ctl_tb[] = {
         .is_log_on = log_on,\
     }
 
-    [MODULE_GLOBAL]     = LOG_CTL_ENTRY("kern",IS_LOG_GLOBAL_ON),
     [MODULE_INIT]       = LOG_CTL_ENTRY("kern/init",IS_LOG_INIT_ON),
     [MODULE_MEMORY]     = LOG_CTL_ENTRY("kern/mm",IS_LOG_MEMORY_ON),
     [MODULE_TRAP]       = LOG_CTL_ENTRY("kern/trap",IS_LOG_TRAP_ON),
@@ -452,6 +462,7 @@ static struct log_ctl_entry log_ctl_tb[] = {
     [MODULE_SYSCALL]    = LOG_CTL_ENTRY("kern/syscall",IS_LOG_SYSCALL_ON),
     [MODULE_SCHEDULE]   = LOG_CTL_ENTRY("kern/schedule",IS_LOG_SCHEDULE_ON),
     [MODULE_DEBUG]      = LOG_CTL_ENTRY("kern/debug",IS_LOG_DEBUG_ON),
+    [MODULE_GLOBAL]     = LOG_CTL_ENTRY("kern",IS_LOG_GLOBAL_ON),
 };
 
 static struct log_ctl_entry*
@@ -462,6 +473,7 @@ get_ctl_entry(const char *mod_name){
             return &log_ctl_tb[i];
         }
     }
+    warn("[get_ctl_entry] did not find modname: %s in module table.\n", mod_name);
     return NULL;
 }
 

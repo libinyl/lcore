@@ -33,7 +33,7 @@
  *      - ESP的值由 ESP0 维护.
  *
  * 当在保护模式发生中断时,x86cpu 会在 TSS 段中寻找 SS0 和 ESP0 值,并分别加载到 SS 和 ESP 寄存器.
- * 
+ * 也就是说,保存的是发生中断前的栈相关指针位置.
  * */
 static struct taskstate ts = {0};
 
@@ -153,7 +153,7 @@ gdt_init(void) {
     LOG_TAB("4. 加载 TSS 段选择子到 TR 寄存器\n");
     LOG_TAB("5. 更新所有段寄存器的段选择子值为 0,即平铺结构\n");
 
-    // 设置内核栈基址和默认的 SS0
+    // 设置初始内核栈基址和默认的 SS0
     load_esp0((uintptr_t)bootstacktop); // 设置TSS内核栈指针为bootstacktop
     ts.ts_ss0 = KERNEL_DS;              // 设置TSS内核栈段选择子(即内核栈基址),默认指向 GDT 中的 SEG_KDATA一项
 

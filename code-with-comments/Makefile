@@ -247,7 +247,7 @@ $(call create_target,ucore.img)
 
 # -------------------------------------------------------------------
 
-# create swap.img
+# create swap.img, 128M
 SWAPIMG		:= $(call totarget,swap.img)
 
 $(SWAPIMG):

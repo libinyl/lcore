@@ -1,5 +1,9 @@
 file bin/kernel
 target remote :1234
 b kern_init
-b pmm_init
-b gdt_init
+b proc_init
+b swap_init
+b fs_init
+b clock_init
+b cpu_idle
+b proc_run

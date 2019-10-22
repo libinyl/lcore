@@ -16,10 +16,9 @@ swapfs_init(void) {
     }
     max_swap_offset = ide_device_size(SWAP_DEV_NO) / (PGSIZE / SECTSIZE);
     LOG("swapfs_init: 交换分区条件已满足: 分页大小是扇区大小的整数倍.\n");
-    LOG("             已将 %d 号ide磁盘设为交换分区.\n",SWAP_DEV_NO);
-    LOG("             此磁盘大小为 %u byte\n",ide_device_size(SWAP_DEV_NO));
-    LOG("             此磁盘大小为 %u byte\n",ide_device_size(SWAP_DEV_NO));
-
+    LOG_TAB("已将 %d 号ide磁盘设为交换分区.\n",SWAP_DEV_NO);
+    LOG_TAB("此磁盘大小为 %u byte\n",ide_device_size(SWAP_DEV_NO));
+    LOG("swapfs_init end.\n");
 }
 
 int

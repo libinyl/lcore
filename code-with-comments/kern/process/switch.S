@@ -12,14 +12,14 @@
 #     uint32_t ebp;
 # };
 
-
+# switch_to(struct context *from, struct context *to);
 # 注意 context 在 PCB 中以结构体而非指针类型保存.
-
+# 注意函数栈帧, 进入函数体内之后,从上到下的栈内参数有三: &(next->context), &(prev->context), 返回地址.
 
 switch_to:                      # switch_to(from, to)
 
     # 在栈上保存 from 的执行现场
-    movl 4(%esp), %eax          # eax 指向 from,其实也指向了 frome 的 eip
+    movl 4(%esp), %eax          # eax 指向 from,其实也指向了 from 的 eip
     popl 0(%eax)                # pop 前,esp 指向调用者的 eip,即返回地址,pop 后直接把 eip 赋给了 from 的 eip 变量. 然后 esp 指向了 from.
     movl %esp, 4(%eax)          # 把当前各种寄存器的值保存在 from context 的内存中.
     movl %ebx, 8(%eax)

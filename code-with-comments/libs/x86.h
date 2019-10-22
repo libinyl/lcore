@@ -144,7 +144,7 @@ static inline void
 lidt(struct pseudodesc *pd) {
     asm volatile ("lidt (%0)" :: "r" (pd) : "memory");
 }
-
+//sti = Set Interupt, 允许中断
 static inline void
 sti(void) {
     asm volatile ("sti");

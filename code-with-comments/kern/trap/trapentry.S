@@ -37,7 +37,6 @@
 
 
 # vectors.S 把所有 trap 发送到此
-# vectors
 .text
 .globl __alltraps
 __alltraps:
@@ -71,6 +70,11 @@ __alltraps:
     popl %esp
 
 # 通过__trapret从中断返回.
+# 中断返回:
+# 
+
+
+
 .globl __trapret
 __trapret:
     # 1. 恢复各种寄存器值

@@ -238,22 +238,32 @@ get_pid(void) {
  * 2. 设置内核栈(tss)
  * 3. 配置新进程的栈指针,和cr3
  * 4. 调用 switch_to 切换进程上下文
+ * 
+ * Q: switch_to 之后, switch 到了哪里? 
+ *    到了参数中 proc->context 指定的地址.这个地址是哪里? 就是这个 proc 上次来到这里的 switch_to, 本身作为 from 一方保存的context! 所以看起来会继续执行当前代码!
  */ 
 void
 proc_run(struct proc_struct *proc) {
+    LOG("proc_run begin:\n");
+    LOG_TAB("pid: %d\n", proc->pid);
     if (proc != current) {
         bool intr_flag;
         struct proc_struct *prev = current, *next = proc;
         local_intr_save(intr_flag);
         {
+            LOG("pid=%d, 切换前\n", current->pid);
             current = proc;     //1 更新 current
+            LOG_TAB("已更新 current\n");
             load_esp0(next->kstack + KSTACKSIZE);           // 2 当前进程的内核栈顶
+            LOG_TAB("已更新 kstack\n");
             lcr3(next->cr3);    //3 用于用户进程页表切换
             // 把当前环境保存在 from,把 to 的状态加载到环境上
-            switch_to(&(prev->context), &(next->context));  //4 执行完之后,当前进程已经是下一个进程了
+            switch_to(&(prev->context), &(next->context));  //4 执行完之后,当前进程已经是下一个进程了. 注意,context 的初始值是什么?
+            LOG("pid=%d, 切换后\n", proc->pid);
         }
         local_intr_restore(intr_flag);
     }
+    LOG("proc_run end.\n");
 }
 
 // forkret -- the first kernel entry point of a new thread/process
@@ -299,6 +309,12 @@ find_proc(int pid) {
 
 // 创建内核线程,以函数 fn 为控制流.
 //      构造新的内核态的 trapframe,用于 do_fork 中复制.
+/**
+ * 内核栈结构是个重要但貌似被忽视的话题.
+ * kernel_thread 专门用于初始化内核线程,它们共用一个代码段,数据段,mm等,但入口不同;每个线程有自己的栈空间.
+ * 想要执行内核线程, 至少需要指定 1)函数地址 2)函数参数
+ * 
+ */ 
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     LOG("\nkernel_thread begin:\n");
@@ -312,11 +328,11 @@ kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
     tf.tf_eip = (uint32_t)kernel_thread_entry;      // 内核线程入口点
 
     LOG_TAB("为 do_fork 准备 trapframe:\n");
-    LOG_TAB("代码段选择子: 0x%08lx\n",KERNEL_CS);
-    LOG_TAB("数据段选择子: 0x%08lx\n",KERNEL_DS);
-    LOG_TAB("该内核线程起始地址初始化: 0x%08lx\n",(uintptr_t *)fn);
-    LOG_TAB("入口点初始化 :0x%08lx\n",kernel_thread_entry);
-    LOG("trapframe准备完毕,即将进入 do_fork. 指定选项: CLONE_VM.\n");
+    LOG_TAB("内核线程共享代码段选择子: 0x%08lx\n",KERNEL_CS);
+    LOG_TAB("内核线程共享数据段选择子: 0x%08lx\n",KERNEL_DS);
+    LOG_TAB("指定起始函数: 0x%08lx\n",(uintptr_t *)fn);
+    LOG_TAB("指定 eip 入口: 0x%08lx\n",kernel_thread_entry);
+    LOG("trapframe准备完毕,即将进入 do_fork. 指定选项: CLONE_VM, 即内核线程共享 mm_struct.\n");
 
     return do_fork(clone_flags | CLONE_VM, 0, &tf);
 }
@@ -436,7 +452,7 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
 
     //context 的其他字段都是 0
     proc->context.eip = (uintptr_t)forkret;     // eip ->forkret->用 tf 恢复的现场
-    proc->context.esp = (uintptr_t)(proc->tf);  // 紧邻 tf 之下.内核栈的基址就是 kstack,而不是 bp.process 的context初始化时每个值都是 0.
+    proc->context.esp = (uintptr_t)(proc->tf);  // 紧邻 tf 之下.内核栈的基址就是 kstack,而不是 bp. process 的context初始化时每个值都是 0.
 }
 
 //copy_fs&put_fs function used by do_fork in LAB8
@@ -494,9 +510,11 @@ put_fs(struct proc_struct *proc) {
  */
 /**
  * 
- * fork 的结果,从父进程的视角看,是初始化新的进程结构并*加入到运行队列*里.(wakeup_proc)
+ * fork 的结果,从父进程的视角看,是初始化新的进程结构并*加入到运行队列*里.(wakeup_proc),并初始化时间片
  * 
  * stack: 父进程的stack pointer.如果值为 0,意味着这是在 fork 一个内核进程.
+ * fork 最终改变的队列: rq 就绪队列.
+ * 进程的主要结构要么 share,要么 duplicate.
  * 
  * 步骤:
  *      - 构造新的 PCB
@@ -504,7 +522,6 @@ put_fs(struct proc_struct *proc) {
  *      - 复制内存描述符(mm)
  *      - 设置上下文,用户栈地址,进程入口(即cotext的 ip 和 sp,待调度时切换过去)
  *      - 中断帧(复制来自 kernel_thread 的初始值并调整)
- *      - 
  */ 
 int
 do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
@@ -529,14 +546,6 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
      *   proc_list:    the process set's list
      *   nr_process:   the number of process set
      */
-
-    //    1. call alloc_proc to allocate a proc_struct
-    //    2. call setup_kstack to allocate a kernel stack for child process
-    //    3. call copy_mm to dup OR share mm according clone_flag
-    //    4. call copy_thread to setup tf & context in proc_struct
-    //    5. insert proc_struct into hash_list && proc_list
-    //    6. call wakeup_proc to make the new child process RUNNABLE
-    //    7. set ret vaule using child proc's pid
 
 	//LAB5 YOUR CODE : (update LAB4 steps)
    /* Some Functions
@@ -563,14 +572,13 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     if (copy_fs(clone_flags, proc) != 0) { //for LAB8
         goto bad_fork_cleanup_kstack;
     }
-    //复制父进程的内存结构
+    // 设置父进程的内存结构
     LOG_TAB("4. 设置 mm_struct\n");
     if (copy_mm(clone_flags, proc) != 0) {
         goto bad_fork_cleanup_fs;
     }
-    // 复制父进程的 trapframe 和 context
-    LOG_TAB("5. 设置 trapframe\n");
-
+    // 设置父进程的 trapframe 和 context
+    LOG_TAB("5. 设置 trapframe 和 context\n");
     copy_thread(proc, stack, tf);
 
     // 添加到全局进程维护表中
@@ -602,6 +610,7 @@ bad_fork_cleanup_kstack:
     put_kstack(proc);
 bad_fork_cleanup_proc:
     kfree(proc);
+    LOG("\ndo_fork bad end\n");
     goto fork_out;
 }
 
@@ -716,6 +725,7 @@ load_icode_read(int fd, void *buf, size_t len, off_t offset) {
 
 static int
 load_icode(int fd, int argc, char **kargv) {
+    LOG("load_icode begin:\n");
     /* LAB8:EXERCISE2 YOUR CODE  HINT:how to load the file with handler fd  in to process's memory? how to setup argc/argv?
      * MACROs or Functions:
      *  mm_create        - create a mm
@@ -753,10 +763,12 @@ load_icode(int fd, int argc, char **kargv) {
     if ((mm = mm_create()) == NULL) {
         goto bad_mm;
     }
+    LOG_TAB("初始化: mm\n");
     /**  **/
     if (setup_pgdir(mm) != 0) {
         goto bad_pgdir_cleanup_mm;
     }
+    LOG_TAB("\t初始化: 页表, 即 mm->pgdir\n");
 
     struct Page *page;
 
@@ -765,20 +777,25 @@ load_icode(int fd, int argc, char **kargv) {
     if ((ret = load_icode_read(fd, elf, sizeof(struct elfhdr), 0)) != 0) {
         goto bad_elf_cleanup_pgdir;
     }
+    LOG_TAB("已加载: elf header\n");
 
     if (elf->e_magic != ELF_MAGIC) {
         ret = -E_INVAL_ELF;
         goto bad_elf_cleanup_pgdir;
     }
+    LOG_TAB("已验证: elf header 有效\n");
 
     // (从磁盘)加载所有 elf program header
     struct proghdr __ph, *ph = &__ph;
     uint32_t vm_flags, perm, phnum;
+    LOG_TAB("开始加载 elf program:\n");
     for (phnum = 0; phnum < elf->e_phnum; phnum ++) {
+        LOG_TAB("正在加载第 %d 个 program, 共 %d 个.\n",phnum+1, elf->e_phnum);
         off_t phoff = elf->e_phoff + sizeof(struct proghdr) * phnum;
         if ((ret = load_icode_read(fd, ph, sizeof(struct proghdr), phoff)) != 0) {
             goto bad_cleanup_mmap;
         }
+        LOG_TAB("\t已加载: program header\n");
         
         /*** elf program header 校验 begin ***/
         if (ph->p_type != ELF_PT_LOAD) {
@@ -791,8 +808,8 @@ load_icode(int fd, int argc, char **kargv) {
         if (ph->p_filesz == 0) {
             continue ;
         }
+        LOG_TAB("\t已校验: program header\n");
         /*** elf program header 校验 end ***/
-
         // 根据elf 标志位 确认内存描述符属性
         vm_flags = 0, perm = PTE_U;
         if (ph->p_flags & ELF_PF_X) vm_flags |= VM_EXEC;
@@ -803,6 +820,7 @@ load_icode(int fd, int argc, char **kargv) {
         if ((ret = mm_map(mm, ph->p_va, ph->p_memsz, vm_flags, NULL)) != 0) {
             goto bad_cleanup_mmap;
         }
+        LOG_TAB("\t已建立 mm: [0x%08lx,0x%08lx)\n", ph->p_va, ph->p_va + ph->p_memsz);
         off_t offset = ph->p_offset;
         size_t off, size;
         uintptr_t start = ph->p_va, end, la = ROUNDDOWN(start, PGSIZE);
@@ -851,6 +869,7 @@ load_icode(int fd, int argc, char **kargv) {
             memset(page2kva(page) + off, 0, size);
             start += size;
         }
+        LOG_TAB("\t已建立: 页表\n");
     }
     sysfile_close(fd);
 
@@ -896,6 +915,7 @@ load_icode(int fd, int argc, char **kargv) {
     tf->tf_eip = elf->e_entry;                      // 此 elf 的入口
     tf->tf_eflags = FL_IF;
     ret = 0;
+    LOG("load_icode end.\n");
 out:
     return ret;
 bad_cleanup_mmap:
@@ -960,6 +980,7 @@ failed_cleanup:
  */ 
 int
 do_execve(const char *name, int argc, const char **argv) {
+    LOG("do_execve begin:\n");
     static_assert(EXEC_MAX_ARG_LEN >= FS_MAX_FPATH_LEN);
     struct mm_struct *mm = current->mm;
     if (!(argc >= 1 && argc <= EXEC_MAX_ARG_NUM)) {
@@ -997,6 +1018,7 @@ do_execve(const char *name, int argc, const char **argv) {
     if ((ret = fd = sysfile_open(path, O_RDONLY)) < 0) {
         goto execve_exit;
     }
+    LOG_TAB("已 open 用户程序文件.\n");
     if (mm != NULL) {
         lcr3(boot_cr3);
         if (mm_count_dec(mm) == 0) {
@@ -1012,6 +1034,8 @@ do_execve(const char *name, int argc, const char **argv) {
     }
     put_kargv(argc, kargv);
     set_proc_name(current, local_name);
+    LOG_TAB("已设置进程名称为%s.\n", local_name);
+    LOG("do_execve end\n");
     return 0;
 
 execve_exit:
@@ -1157,6 +1181,7 @@ const char *argv[] = {path, ##__VA_ARGS__, NULL};       \
 #define KERNEL_EXECVE3(x, s, ...)               __KERNEL_EXECVE3(x, s, ##__VA_ARGS__)
 
 // user_main - kernel thread used to exec a user program
+// 最终通过 exec 执行程序
 static int
 user_main(void *arg) {
 #ifdef TEST
@@ -1175,6 +1200,7 @@ user_main(void *arg) {
 // initproc 内核线程执行函数
 static int
 init_main(void *arg) {
+    LOG("init_main start:\n");
     int ret;
     if ((ret = vfs_set_bootfs("disk0:")) != 0) {
         panic("set boot fs failed: %e.\n", ret);
@@ -1184,26 +1210,28 @@ init_main(void *arg) {
     size_t kernel_allocated_store = kallocated();
 
     int pid = kernel_thread(user_main, NULL, 0);
+    LOG_TAB("已创建内核态用户线程:user_main\n");
     if (pid <= 0) {
         panic("create user_main failed.\n");
     }
  extern void check_sync(void);
-    check_sync();                // check philosopher sync problem
+    //check_sync();                // check philosopher sync problem
 
-    while (do_wait(0, NULL) == 0) {
+    while (do_wait(0, NULL) == 0) { // 作为所有子进程的父进程,清理所有子进程资源
         schedule();
     }
 
     fs_cleanup();
         
-    LOG("all user-mode processes have quit.\n");
+    LOG_TAB("all user-mode processes have quit.\n");
     assert(initproc->cptr == NULL && initproc->yptr == NULL && initproc->optr == NULL);
     assert(nr_process == 2);
     assert(list_next(&proc_list) == &(initproc->list_link));
     assert(list_prev(&proc_list) == &(initproc->list_link));
     assert(nr_free_pages_store == nr_free_pages());
     assert(kernel_allocated_store == kallocated());
-    LOG("init check memory pass.\n");
+    LOG_TAB("init check memory pass.\n");
+    LOG("init_main end.\n");
     return 0;
 }
 
@@ -1256,6 +1284,7 @@ proc_init(void) {
 
     int pid = kernel_thread(init_main, NULL, 0);
     LOG_TAB("kernel_thread返回 pid:%d\n", pid);
+    LOG_TAB("内核线程 init 已创建\n.");
     if (pid <= 0) {
         panic("create init_main failed.\n");
     }
@@ -1266,14 +1295,12 @@ proc_init(void) {
     assert(idleproc != NULL && idleproc->pid == 0);
     assert(initproc != NULL && initproc->pid == 1);
     LOG("proc_init end\n");
-
-
 }
 
 // idle: 闲散的内核进程,不断地检测"当前进程"是否被指定暂时放弃资源.
 void
 cpu_idle(void) {
-    LOG("进入 cpu_idle 函数\n");
+    LOG("cpu_idle:\n");
     while (1) {
         if (current->need_resched) {
             schedule();

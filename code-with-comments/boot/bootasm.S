@@ -20,7 +20,7 @@ start:
     cli                                             # 关中断, 防止干扰开启A20,  和保证设置GDT的完整性
     cld                                             # 设置字符串操作是递增方向(direct flag标志位清零)
 
-    # 设置重要的段寄存器(置零)(DS, ES, SS)
+    # 设置重要的段寄存器(置零)(DS, ES, SS),全平铺
     xorw %ax, %ax                                   # Segment number zero
     movw %ax, %ds                                   # -> Data Segment
     movw %ax, %es                                   # -> Extra Segment
@@ -83,6 +83,7 @@ finish_probe:
     # Jump to next instruction, but in 32-bit code segment.
     # Switches processor into 32-bit mode.
     # 跳转到下一个指令,但是是在 32 位模式下.
+    # 必须用 ljmp, 长转移指令
     ljmp $PROT_MODE_CSEG, $protcseg
 
 .code32                                             # Assemble for 32-bit mode

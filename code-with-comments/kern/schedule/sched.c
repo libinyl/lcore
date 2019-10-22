@@ -29,6 +29,7 @@ static inline void
 sched_class_enqueue(struct proc_struct *proc) {
     if (proc != idleproc) {
         sched_class->enqueue(rq, proc);
+        LOG("sched_class_enqueue: 进程 %d 已入就绪队列 rq.\n", proc->pid);
     }
 }
 
@@ -123,26 +124,35 @@ wakeup_proc(struct proc_struct *proc) {
  * 2. 当前进程及 RUNNABLE 状态加入就绪队列
  * 3. 从就绪队列里挑选新的进程,并执行
  */ 
+
+/**
+ * 调度过程只涉及 rq 队列.
+ * 1. 触发 trigger scheduling
+ * 2. 入队 enqueue
+ * 3. 选取 pick up
+ * 4. 出队 dequeue
+ * 5. 切换 switch
+ */
 void
-schedule(void) {
-    //LOG("进入 schedule函数!\n");
+schedule(void) {                                        // 1. 触发
+    //LOG("触发进程调度\n");
     bool intr_flag;
     struct proc_struct *next;
     local_intr_save(intr_flag);
     {
         current->need_resched = 0;
         if (current->state == PROC_RUNNABLE) {
-            sched_class_enqueue(current);
+            sched_class_enqueue(current);               // 2. 当前进程入队
         }
-        if ((next = sched_class_pick_next()) != NULL) {
-            sched_class_dequeue(next);
+        if ((next = sched_class_pick_next()) != NULL) { // 3. 池内选取新进程
+            sched_class_dequeue(next);                  // 4. 新进程出队
         }
-        if (next == NULL) {
+        if (next == NULL) {// 池内无进程,只好运行 idleproc
             next = idleproc;
         }
         next->runs ++;
         if (next != current) {
-            proc_run(next);
+            proc_run(next);                             // 5. 切换
         }
     }
     local_intr_restore(intr_flag);
