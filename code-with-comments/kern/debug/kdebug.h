@@ -15,17 +15,17 @@
  */ 
 #define LOG_LINE_ON 0           // 行打印开关,即"---xxx---"形式的开关
 
-#define IS_LOG_GLOBAL_ON 0  // 日志总控(不含LOG_LINE)
+#define IS_LOG_GLOBAL_ENABLE 1  // 日志总控(不含LOG_LINE)
 #define IS_LOG_INIT_ON 1
 #define IS_LOG_MEMORY_ON 1
 #define IS_LOG_TRAP_ON 0
 #define IS_LOG_SYNC_ON 0
-#define IS_LOG_PROCESS_ON 1
+#define IS_LOG_PROCESS_ON 0
 #define IS_LOG_FS_ON 0
 #define IS_LOG_DRIVER_ON 0
 #define IS_LOG_SYSCALL_ON 0
 #define IS_LOG_SCHEDULE_ON 0
-#define IS_LOG_DEBUG_ON 1
+#define IS_LOG_DEBUG_ON 0
 
 extern int _will_log;
 extern int log(const char *fmt, ...);

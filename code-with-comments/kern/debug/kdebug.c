@@ -435,7 +435,6 @@ log(const char *fmt, ...) {
 #define MODULE_SYSCALL 7
 #define MODULE_SCHEDULE 8
 #define MODULE_DEBUG 9
-#define MODULE_GLOBAL 10
 
 
 int _will_log = 1;
@@ -451,7 +450,6 @@ static struct log_ctl_entry log_ctl_tb[] = {
         .mod_name = name,\
         .is_log_on = log_on,\
     }
-
     [MODULE_INIT]       = LOG_CTL_ENTRY("kern/init",IS_LOG_INIT_ON),
     [MODULE_MEMORY]     = LOG_CTL_ENTRY("kern/mm",IS_LOG_MEMORY_ON),
     [MODULE_TRAP]       = LOG_CTL_ENTRY("kern/trap",IS_LOG_TRAP_ON),
@@ -462,19 +460,19 @@ static struct log_ctl_entry log_ctl_tb[] = {
     [MODULE_SYSCALL]    = LOG_CTL_ENTRY("kern/syscall",IS_LOG_SYSCALL_ON),
     [MODULE_SCHEDULE]   = LOG_CTL_ENTRY("kern/schedule",IS_LOG_SCHEDULE_ON),
     [MODULE_DEBUG]      = LOG_CTL_ENTRY("kern/debug",IS_LOG_DEBUG_ON),
-    [MODULE_GLOBAL]     = LOG_CTL_ENTRY("kern",IS_LOG_GLOBAL_ON),
 };
 
 static struct log_ctl_entry*
 get_ctl_entry(const char *mod_name){
-    if(!mod_name) return NULL;
+    if((!mod_name) || (!IS_LOG_GLOBAL_ENABLE)) return NULL;
     struct log_ctl_entry *e = NULL;
     for(int i = 0; i < sizeof(log_ctl_tb)/sizeof(struct log_ctl_entry); ++i ){
         if(!strncmp(log_ctl_tb[i].mod_name, mod_name, strlen(log_ctl_tb[i].mod_name))){
-            e = &log_ctl_tb[i];// lookup the table above
+            return &log_ctl_tb[i];// lookup the table above
         }
     }
-    return e;
+    warn("get_ctl_entry: did not find a entry match [%s].\n", mod_name);
+    return NULL;
 }
 
 /**
