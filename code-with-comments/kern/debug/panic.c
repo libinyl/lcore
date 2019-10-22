@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <intr.h>
 #include <kmonitor.h>
+#include <kdebug.h>
 
 static bool is_panic = 0;
 

@@ -51,6 +51,8 @@ typedef int bool;
 #define warn(...)           __error(warn, 0, __VA_ARGS__)
 #define bug(...)            __error(bug, 1, __VA_ARGS__)
 
+#define log(...)            fprintf(stdout, __VA_ARGS__)
+#define logtab(...)         fprintf(stdout, "\t"__VA_ARGS__)
 /*
 static_assert(cond, msg) is defined in /usr/include/assert.h
 #define static_assert(x)                                                                \
@@ -401,6 +403,8 @@ close_sfs(struct sfs_fs *sfs) {
 
 struct sfs_fs *
 open_img(const char *imgname) {
+    log("open_img:\n");
+
     const char *expect = ".img", *ext = imgname + strlen(imgname) - strlen(expect);
     if (ext <= imgname || strcmp(ext, expect) != 0) {
         bug("invalid .img file name '%s'.\n", imgname);
@@ -629,8 +633,9 @@ static_check(void) {
 
 int
 main(int argc, char **argv) {
-    fprintf(stdout, "\n\n----------文件系统生成程序----------\n");
-    fprintf(stdout, "参数: %s, %s\n", argv[1],argv[2]);
+    log("\n\n----------文件系统生成程序----------\n");
+    //命令: mksfs bin/sfs.img disk0, 把 sfs.img 这个 128M 的空文件
+    log("参数: %s, %s\n", argv[1],argv[2]);
     
     static_check();
     if (argc != 3) {

@@ -13,9 +13,9 @@
  * 2) 区域日志开关: 如果想屏蔽对某个区域的日志, 只需用 _NO_LOG_START 和_NO_LOG_END包裹区域即可.
  *    这两个宏已配置为必须成对出现,否则无法编译通过.
  */ 
-#define LOG_LINE_ON 1           // 行打印开关,即"---xxx---"形式的开关
+#define LOG_LINE_ON 0           // 行打印开关,即"---xxx---"形式的开关
 
-#define IS_LOG_GLOBAL_ON 1  // 日志总控(不含LOG_LINE)
+#define IS_LOG_GLOBAL_ON 0  // 日志总控(不含LOG_LINE)
 #define IS_LOG_INIT_ON 1
 #define IS_LOG_MEMORY_ON 1
 #define IS_LOG_TRAP_ON 0
