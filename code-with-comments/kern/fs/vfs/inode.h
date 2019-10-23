@@ -35,19 +35,19 @@ struct iobuf;
  * 从文件系统的角度描述了一个目录项.
  * 作用范围是整个 OS 空间
  * 
- * 
- * inode 有两种类型: device 类型和 sfs_inode 类型.
- * 
  * 如果此结构中的 inode_type_device_info 值为 0x1234,
  * 那么此 inode 的 in_info 成为一个 device 结构;
  * 否则 in_info 是一个 sfs_inode 结构.
+ * 
+ * 侵入式的面向对象编程风格
+ * inode: inode 基类, 实际可能有两种子类型: device 类型和 sfs_inode 类型.
  */ 
 struct inode {
     union {                                 // 用于屏蔽不同文件系统差异
         struct device __device_info;        // 设备文件, 访问外围设备.对应设备文件系统内存inode信息
         struct sfs_inode __sfs_inode_info;  // 常规文件, 对应SFS文件系统内存inode信息
     } in_info;
-    enum {
+    enum {// 可派生类型
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
     } in_type;                              // 此 inode 类型

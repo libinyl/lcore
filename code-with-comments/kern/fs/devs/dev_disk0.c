@@ -9,6 +9,7 @@
 #include <iobuf.h>
 #include <error.h>
 #include <assert.h>
+#include <kdebug.h>
 
 #define DISK0_BLKSIZE                   PGSIZE                      // 每个块的byte数
 #define DISK0_BUFSIZE                   (4 * DISK0_BLKSIZE)         // 磁盘模块缓冲区byte 数
@@ -137,6 +138,7 @@ disk0_ioctl(struct device *dev, int op, void *data) {
  */ 
 static void
 disk0_device_init(struct device *dev) {
+    LOG("disk0_device_init:\n");
     static_assert(DISK0_BLKSIZE % SECTSIZE == 0);
     if (!ide_device_valid(DISK0_DEV_NO)) {
         panic("disk0 device isn't available.\n");
@@ -148,12 +150,14 @@ disk0_device_init(struct device *dev) {
     dev->d_io = disk0_io;
     dev->d_ioctl = disk0_ioctl;
     sem_init(&(disk0_sem), 1);
-
+    LOG_TAB("初始化数据结构: dev\n");
     static_assert(DISK0_BUFSIZE % DISK0_BLKSIZE == 0);
     // 初始化磁盘 buffer
     if ((disk0_buffer = kmalloc(DISK0_BUFSIZE)) == NULL) {
         panic("disk0 alloc buffer failed.\n");
     }
+    LOG_TAB("初始化数据结构: disk0_buffer = 4 PGSIZE\n");
+    LOG_TAB("device0 数据结构已就位.\n");
 }
 
 /**
@@ -163,6 +167,7 @@ disk0_device_init(struct device *dev) {
  */ 
 void
 dev_init_disk0(void) {
+    LOG("dev_init_disk0:\n");
     struct inode *node;
     if ((node = dev_create_inode()) == NULL) {
         panic("disk0: dev_create_node.\n");
@@ -173,5 +178,6 @@ dev_init_disk0(void) {
     if ((ret = vfs_add_dev("disk0", node, 1)) != 0) {
         panic("disk0: vfs_add_dev: %e.\n", ret);
     }
+    LOG("vfs 已维护:disk0\n");
 }
 

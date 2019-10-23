@@ -5,6 +5,7 @@
 #include <inode.h>
 #include <unistd.h>
 #include <error.h>
+#include <kdebug.h>
 
 /**
  * dev 级别的 io,以 ionode 为操作对象
@@ -156,14 +157,17 @@ static const struct inode_ops dev_node_ops = {
 /* 初始化 builtin vfs 级别的设备, 即 stdin,stdout,disk0. */
 void
 dev_init(void) {
+    LOG("dev_init:\n");
    // init_device(null);
-    init_device(stdin);
-    init_device(stdout);
-    init_device(disk0);
+    init_device(stdin);     // => dev_init_stdin();
+    init_device(stdout);    // => dev_init_stdout();
+    init_device(disk0);     // => dev_init_disk0();
+    LOG_TAB("dev_init:已初始化设备:stdin,stdout,disk0\n");
 }
 /* dev_create_inode - Create inode for a vfs-level device. */
 struct inode *
 dev_create_inode(void) {
+    LOG("dev_create_inode:\n");
     struct inode *node;
     if ((node = alloc_inode(device)) != NULL) {
         vop_init(node, &dev_node_ops, NULL);

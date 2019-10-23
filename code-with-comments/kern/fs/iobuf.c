@@ -3,6 +3,7 @@
 #include <iobuf.h>
 #include <error.h>
 #include <assert.h>
+#include <kdebug.h>
 
 /* 
  * iobuf_init - init io buffer struct.
@@ -12,6 +13,7 @@
  */
 struct iobuf *
 iobuf_init(struct iobuf *iob, void *base, size_t len, off_t offset) {
+    LOG("iobuf_init:\n");
     iob->io_base = base;
     iob->io_offset = offset;
     iob->io_len = iob->io_resid = len;

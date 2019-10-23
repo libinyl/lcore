@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <kdebug.h>
 
 #define STDIN_BUFSIZE               4096
 
@@ -113,6 +114,7 @@ stdin_device_init(struct device *dev) {
 
 void
 dev_init_stdin(void) {
+    LOG("dev_init_stdin:\n");
     struct inode *node;
     if ((node = dev_create_inode()) == NULL) {
         panic("stdin: dev_create_node.\n");

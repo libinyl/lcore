@@ -15,6 +15,7 @@
  */
 struct inode *
 __alloc_inode(int type) {
+    LOG("__alloc_inode: type = %d\n",type);
     struct inode *node;
     if ((node = kmalloc(sizeof(struct inode))) != NULL) {
         node->in_type = type;

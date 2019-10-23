@@ -143,6 +143,7 @@ sfs_cleanup(struct fs *fs) {
  */
 static int
 sfs_init_read(struct device *dev, uint32_t blkno, void *blk_buffer) {
+    LOG("sfs_init_read:\n");
     struct iobuf __iob, *iob = iobuf_init(&__iob, blk_buffer, SFS_BLKSIZE, blkno * SFS_BLKSIZE);
     return dop_io(dev, iob, 0);
 }
@@ -185,6 +186,7 @@ sfs_init_freemap(struct device *dev, struct bitmap *freemap, uint32_t blkno, uin
  */
 static int
 sfs_do_mount(struct device *dev, struct fs **fs_store) {
+    LOG("sfs_do_mount:\n");
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_super));
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_disk_inode));
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_disk_entry));
@@ -213,6 +215,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     if ((ret = sfs_init_read(dev, SFS_BLKN_SUPER, sfs_buffer)) != 0) {
         goto failed_cleanup_sfs_buffer;
     }
+    LOG_TAB("已加载: 超级块 \n");
 
     ret = -E_INVAL;
 

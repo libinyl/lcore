@@ -33,6 +33,10 @@ For example:
 #include <errno.h>
 #include <assert.h>
 
+#define IS_MKSFS_LOG 1
+
+int will_log = 1;
+
 typedef int bool;
 
 #define __error(msg, quit, ...)                                                         \
@@ -51,8 +55,11 @@ typedef int bool;
 #define warn(...)           __error(warn, 0, __VA_ARGS__)
 #define bug(...)            __error(bug, 1, __VA_ARGS__)
 
-#define log(...)            fprintf(stdout, __VA_ARGS__)
-#define logtab(...)         fprintf(stdout, "\t"__VA_ARGS__)
+#define _NO_LOG_START       do{will_log=0;}while(0);{
+#define _NO_LOG_END         do{will_log=1;}while(0);}
+
+#define log(...)            do{ if (will_log && IS_MKSFS_LOG) fprintf(stdout, __VA_ARGS__); } while(0)
+#define logtab(...)         do{ if (will_log && IS_MKSFS_LOG) fprintf(stdout, "\t"__VA_ARGS__); } while(0)
 /*
 static_assert(cond, msg) is defined in /usr/include/assert.h
 #define static_assert(x)                                                                \
@@ -185,7 +192,7 @@ struct sfs_fs {
         char *subname;
     } __sp_nil, *sp_root, *sp_end;
     int imgfd;                                  // 在编译机上的目标 IMG 的 fd
-    uint32_t ninos, next_ino;
+    uint32_t ninos, next_ino;                   // ninos: 总块数; next_ino: superblock + rootinode + bitmap 的块数,=3
     struct cache_inode *root;
     struct cache_inode *inodes[HASH_LIST_SIZE];
     struct cache_block *blocks[HASH_LIST_SIZE];
@@ -230,6 +237,7 @@ search_cache_block(struct sfs_fs *sfs, uint32_t ino) {
  */ 
 static struct cache_inode *
 alloc_cache_inode(struct sfs_fs *sfs, ino_t real, uint32_t ino, uint16_t type) {
+    log("alloc_cache_inode:\n");
     struct cache_inode *ci = safe_malloc(sizeof(struct cache_inode));
     ci->ino = (ino != 0) ? ino : sfs_alloc_ino(sfs);
     ci->real = real, ci->nblks = 0, ci->l1 = ci->l2 = NULL;
@@ -255,32 +263,39 @@ search_cache_inode(struct sfs_fs *sfs, ino_t real) {
  */ 
 struct sfs_fs *
 create_sfs(int imgfd) {
+    log("create_sfs:\n");
     // 1. 计算目标文件可容纳总块数 ninos,计算文件系统元数据区实际占用块数 next_ino.
     uint32_t ninos, next_ino;
     struct stat *stat = safe_fstat(imgfd);
+    logtab("img 大小: %lldB = %lldM\n",stat->st_size, stat->st_size/1024/1024);
     // 总块数 = 编译机指定的目标IMG文件大小/块大小
     if ((ninos = stat->st_size / SFS_BLKSIZE) > SFS_MAX_NBLKS) {
+        logtab("计算块数 ninos = %ud\n",ninos);
         ninos = SFS_MAX_NBLKS;
         warn("img file is too big (%llu bytes, only use %u blocks).\n",
                 (unsigned long long)stat->st_size, ninos);
     }
+    logtab("已确定块数 ninos = min{ (stat->st_size / SFS_BLKSIZE), SFS_MAX_NBLKS} = %u\n",ninos);
     // bitmap
     if ((next_ino = SFS_BLKN_FREEMAP + (ninos + SFS_BLKBITS - 1) / SFS_BLKBITS) >= ninos) {
         bug("img file is too small (%llu bytes, %u blocks, bitmap use at least %u blocks).\n",
                 (unsigned long long)stat->st_size, ninos, next_ino - 2);
     }
-
+    logtab("已确定 next_ino = %u\n", next_ino);
+    logtab("开始初始化 sfs 结构.\n");
     struct sfs_fs *sfs = safe_malloc(sizeof(struct sfs_fs));
     sfs->super.magic = SFS_MAGIC;
 
-    // /----- next_ino ----|-------- unused_blocks ---\
-    // ------------------------------------------------
-    // \------------------- ninos---------------------/
+    // /---- next_ino = 3 -------|----- unused_blocks ---\
+    // super | rootinode | bitmap|------------------------
+    // \---------------------- ninos---------------------/
 
     sfs->super.blocks = ninos, sfs->super.unused_blocks = ninos - next_ino;
+    logtab("初始化 sfs->super: blocks = %d, unused_blocks = %d\n", ninos, ninos - next_ino );
     snprintf(sfs->super.info, SFS_MAX_INFO_LEN, "simple file system");
 
     sfs->ninos = ninos, sfs->next_ino = next_ino, sfs->imgfd = imgfd;
+
     sfs->sp_root = sfs->sp_end = &(sfs->__sp_nil);
     sfs->sp_end->prev = sfs->sp_end->next = NULL;
 
@@ -291,6 +306,7 @@ create_sfs(int imgfd) {
     }
 
     sfs->root = alloc_cache_inode(sfs, 0, SFS_BLKN_ROOT, SFS_TYPE_DIR);
+    logtab("sfs 结构初始化完毕.\n");
     return sfs;
 }
 
@@ -332,17 +348,24 @@ subpath_show(FILE *fout, struct sfs_fs *sfs, const char *name) {
  */ 
 static void
 write_block(struct sfs_fs *sfs, void *data, size_t len, uint32_t ino) {
+    log("write_block:\n");
+    _NO_LOG_START
     assert(len <= SFS_BLKSIZE && ino < sfs->ninos);
+    logtab("校验: 要写入的数据长度 len = %zu \n", len);
     static char buffer[SFS_BLKSIZE];
+    logtab("调整 data: 若要写入的数据小于 1 块,则复制到大小为 1 块的缓冲区中,确保最后写入 1 整块数据.");
     if (len != SFS_BLKSIZE) {
         memset(buffer, 0, sizeof(buffer));
         data = memcpy(buffer, data, len);
+        logtab("从data=>buffer, 复制了%zu个字节.\n",len);
     }
     off_t offset = (off_t)ino * SFS_BLKSIZE;
     ssize_t ret;
     if ((ret = pwrite(sfs->imgfd, data, SFS_BLKSIZE, offset)) != SFS_BLKSIZE) {
         bug("write %u block failed: (%d/%d).\n", ino, (int)ret, SFS_BLKSIZE);
     }
+    logtab("已向 imgfd 从 offset = %lld 的位置开始写入了data 的一块数据\n", offset);
+    _NO_LOG_END
 }
 
 static void
@@ -357,6 +380,7 @@ flush_cache_inode(struct sfs_fs *sfs, struct cache_inode *ci) {
 
 void
 close_sfs(struct sfs_fs *sfs) {
+    log("close_sfs:\n");
     // 1. 写入位图 freemap
     //      buffer: 每个块的 bitmap
     static char buffer[SFS_BLKSIZE];
@@ -413,6 +437,7 @@ open_img(const char *imgname) {
     if ((imgfd = open(imgname, O_WRONLY)) < 0) {
         bug("open '%s' failed.\n", imgname);
     }
+    logtab("已open镜像文件得到 fd\n");
     return create_sfs(imgfd);
 }
 
@@ -633,7 +658,13 @@ static_check(void) {
 
 int
 main(int argc, char **argv) {
-    log("\n\n----------文件系统生成程序----------\n");
+    log("\n\n----------文件系统生成程序----------\n\n");
+    log("SFS 文件系统设计规格:\n");
+    log("\n/------ next_ino = 3 ------|----- unused_blocks ---\\\nsuper | rootinode | bitmap |------------------------\n\\----------------------- ninos---------------------/\n\n");
+    logtab("每块大小:%d B\n",SFS_BLKSIZE);
+    logtab("super 起始块: %d\n",SFS_BLKN_SUPER);
+    logtab("root 起始块: %d\n",SFS_BLKN_ROOT);
+    logtab("freemap 起始块: %d\n",SFS_BLKN_FREEMAP);
     //命令: mksfs bin/sfs.img disk0, 把 sfs.img 这个 128M 的空文件
     log("参数: %s, %s\n", argv[1],argv[2]);
     

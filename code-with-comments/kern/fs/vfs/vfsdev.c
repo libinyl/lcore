@@ -42,8 +42,10 @@ unlock_vdev_list(void) {
 
 void
 vfs_devlist_init(void) {
+    LOG("vfs_devlist_init: \n");
     list_init(&vdev_list);
     sem_init(&vdev_list_sem, 1);
+    LOG_TAB("已初始化: vdev_list\n");
 }
 
 // vfs_cleanup - finally clean (or sync) fs
