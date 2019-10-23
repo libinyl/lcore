@@ -20,24 +20,24 @@ dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 4. 此时在另一终端执行`gdb bin/kernel`, 并`target remote localhost:1234`连接上 qemu, 观察到熟悉的提示信息.事实上到此为止与往常没有明显不同. 现在可以键入`c`,让内核自由运行,直到运行了shell.
 5. 现在的状态是什么? 你可以枉顾 gdb 的存在,在 ucore 执行你的用户程序,如下图:
 
-![](/images/gdb&#32;调试用户程序.png)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%20%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E7%A8%8B%E5%BA%8F.png?raw=1)
 
-6. 但是此时 gdb 加载的是 kernel 的符号.现在只需`Ctrl C`中断 gdb,再键入`file disk0/ls`,即可加载 ls 的符号! 这是...热加载?
-7. 此时键入`b main`,就可以像调试普通用户态程序一样调试 `ls` 了, 如下:
+1. 但是此时 gdb 加载的是 kernel 的符号.现在只需`Ctrl C`中断 gdb,再键入`file disk0/ls`,即可加载 ls 的符号! 这是...热加载?
+2. 此时键入`b main`,就可以像调试普通用户态程序一样调试 `ls` 了, 如下:
 
-![](/images/gdb调试用户程序&#32;2.png)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E7%A8%8B%E5%BA%8F%202.png?raw=1)
 
-8. 同样,当在用户程序遇到系统调用时不用慌,跟进去,用 file切成内核即可!比如我们跟踪到了函数`lsstat`, 想跟入 printf 一探究竟:
+1. 同样,当在用户程序遇到系统调用时不用慌,跟进去,用 file切成内核即可!比如我们跟踪到了函数`lsstat`, 想跟入 `printf` 一探究竟:
 
-![](/images/gdb调试用户态程序3.png)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E6%80%81%E7%A8%8B%E5%BA%8F3.png?raw=1)
 
 最终我们一路跟踪到`user/libs/syscall.c`的`syscall`, 即将陷入中断.此时再执行`n`,就跟不到代码了.
 
-![](/images/gdb调试用户态程序&#32;5.png)
+![](2019-10-24-00-57-35.png)
 
 此时只需键入`file bin/kernel`,就进入了内核态的调试环境!再打个断点, 如`b trap`, 就接住这个系统调用了!
 
-![](/images/gdb&#32;调试用户程序&#32;6.png)
+![](2019-10-24-00-58-41.png)
 
 我想,linux 内核调试起来大概也是如此的流程?
 
@@ -48,9 +48,9 @@ dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 
 首先我们可以看到 gdb 的输出: 
 
->Program received signal SIGINT, Interrupt.
+> Program received signal SIGINT, Interrupt.
 
-**GDB帮用户拦截了致命的信号.**
+事实是: **GDB帮用户拦截了致命的信号.**
 
 键入`(gdb) info signals`可以查看 gdb 帮我们拦截的信号:
 
@@ -66,7 +66,7 @@ SIGABRT       Yes	Yes	Yes		Aborted
 ...
 ```
 
-可以观察到, `Ctrl C` 对应的 *SIGINT* 信号被 gdb 所捕获, 并没有真正终结进程.所以我们可以利用这个间隙来调整 gdb 的选项,就像刚才一样加载其他文件的符号.
+可以观察到, `Ctrl C` 对应的 *SIGINT* 信号被 gdb 所捕获并输出, 并没有真正传递给进程.所以我们可以利用这个间隙来调整 gdb 的选项,就像刚才一样加载其他文件的符号,有了从用户态到内核态来去自由的机会.不过这也许只是手段之一吧,以后有了其他发现再回来更新.
 
 
 ## 更多资料
