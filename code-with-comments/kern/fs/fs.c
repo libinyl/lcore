@@ -12,10 +12,14 @@
 void
 fs_init(void) {
     LOG_LINE("初始化开始:文件系统");
+    LOG("fs_init:\n");
 
     vfs_init();
+    LOG_TAB("初始化完毕:vfs\n");
     dev_init();
+    LOG_TAB("初始化完毕:dev\n");
     sfs_init();
+    LOG_TAB("初始化完毕:sfs\n");
 
     LOG_LINE("初始化完毕:文件系统");
 }

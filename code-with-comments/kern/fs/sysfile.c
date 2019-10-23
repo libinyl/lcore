@@ -47,6 +47,7 @@ failed_cleanup:
 // 参数: 文件路径, flag
 int
 sysfile_open(const char *__path, uint32_t open_flags) {
+    LOG("sysfile_open:\n");
     int ret;
     char *path;
     // 为何要重新复制一次字符串?
@@ -68,6 +69,7 @@ sysfile_close(int fd) {
 
 int
 sysfile_read(int fd, void *base, size_t len) {
+    LOG("sysfile_read:\n");
     struct mm_struct *mm = current->mm;
     if (len == 0) {
         return 0;
@@ -80,6 +82,7 @@ sysfile_read(int fd, void *base, size_t len) {
     if ((buffer = kmalloc(IOBUF_SIZE)) == NULL) {
         return -E_NO_MEM;
     }
+    LOG_TAB("已创建换缓冲区,大小:%d Byte\n",IOBUF_SIZE);
 
     int ret = 0;
     size_t copied = 0, alen;

@@ -101,15 +101,17 @@ stdin_ioctl(struct device *dev, int op, void *data) {
 
 static void
 stdin_device_init(struct device *dev) {
+    LOG("stdin_device_init:\n");
     dev->d_blocks = 0;
     dev->d_blocksize = 1;
     dev->d_open = stdin_open;
     dev->d_close = stdin_close;
     dev->d_io = stdin_io;
     dev->d_ioctl = stdin_ioctl;
-
     p_rpos = p_wpos = 0;
     wait_queue_init(wait_queue);
+    LOG_TAB("stdin inode 的 device 部分初始化完毕.\n");
+    LOG_TAB("初始化完毕: stdin 等待队列.\n");
 }
 
 void
@@ -119,11 +121,13 @@ dev_init_stdin(void) {
     if ((node = dev_create_inode()) == NULL) {
         panic("stdin: dev_create_node.\n");
     }
+    LOG_TAB("已创建 stdin inode, 类型为 device\n");
     stdin_device_init(vop_info(node, device));
 
     int ret;
     if ((ret = vfs_add_dev("stdin", node, 0)) != 0) {
         panic("stdin: vfs_add_dev: %e.\n", ret);
     }
+    LOG_TAB("已将 stdin inode 加入到 vdev_list.\n");
 }
 

@@ -243,6 +243,7 @@ int philosopher_using_condvar(void * arg) { /* arg is the No. of philosopher 0~N
 }
 
 void check_sync(void){
+    LOG("check_sync:\n");
 
     int i;
 

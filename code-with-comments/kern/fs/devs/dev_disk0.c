@@ -157,7 +157,7 @@ disk0_device_init(struct device *dev) {
         panic("disk0 alloc buffer failed.\n");
     }
     LOG_TAB("初始化数据结构: disk0_buffer = 4 PGSIZE\n");
-    LOG_TAB("device0 数据结构已就位.\n");
+    LOG_TAB("disk0 数据结构已就位.\n");
 }
 
 /**
@@ -172,12 +172,13 @@ dev_init_disk0(void) {
     if ((node = dev_create_inode()) == NULL) {
         panic("disk0: dev_create_node.\n");
     }
+    LOG_TAB("已创建 inode: disk0, 类型为 device.\n");
     disk0_device_init(vop_info(node, device));
-
+    LOG_TAB("已初始化: disk0 的 device 部分.\n");
     int ret;
     if ((ret = vfs_add_dev("disk0", node, 1)) != 0) {
         panic("disk0: vfs_add_dev: %e.\n", ret);
     }
-    LOG("vfs 已维护:disk0\n");
+    LOG("已维护:disk0 至 dev_list.\n");
 }
 

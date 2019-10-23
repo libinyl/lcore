@@ -1215,7 +1215,7 @@ init_main(void *arg) {
         panic("create user_main failed.\n");
     }
  extern void check_sync(void);
-    //check_sync();                // check philosopher sync problem
+    check_sync();                // check philosopher sync problem
 
     while (do_wait(0, NULL) == 0) { // 作为所有子进程的父进程,清理所有子进程资源
         schedule();
@@ -1331,7 +1331,10 @@ do_sleep(unsigned int time) {
     timer_t __timer, *timer = timer_init(&__timer, current, time);
     current->state = PROC_SLEEPING;
     current->wait_state = WT_TIMER;
+    LOG_TAB("当前进程状态更新为: PROC_SLEEPING, 等待状态:WT_TIMER \n");
     add_timer(timer);
+    LOG_TAB("已创建 timer, 指向 current, 初始时间片: %d\n", time);
+    
     local_intr_restore(intr_flag);
 
     schedule();

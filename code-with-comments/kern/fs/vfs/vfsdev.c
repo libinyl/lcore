@@ -240,12 +240,16 @@ find_mount(const char *devname, vfs_dev_t **vdev_store) {
  */
 int
 vfs_mount(const char *devname, int (*mountfunc)(struct device *dev, struct fs **fs_store)) {
+    LOG("vfs_mount:\n");
+    LOG_TAB("挂载文件系统流程:\n");
+    LOG_TAB("从vdevlist 中查找并获取 mountable 设备 %s, 并从中加载文件系统.\n", devname);
     int ret;
     lock_vdev_list();
     vfs_dev_t *vdev;
     if ((ret = find_mount(devname, &vdev)) != 0) {
         goto out;
     }
+    LOG_TAB("已找到设备%s.\n", devname);
     if (vdev->fs != NULL) {
         ret = -E_BUSY;
         goto out;

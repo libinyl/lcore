@@ -186,21 +186,24 @@ sfs_init_freemap(struct device *dev, struct bitmap *freemap, uint32_t blkno, uin
  */
 static int
 sfs_do_mount(struct device *dev, struct fs **fs_store) {
-    LOG("sfs_do_mount:\n");
+    LOG("sfs_do_mount: 开始加载 sfs\n");
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_super));
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_disk_inode));
     static_assert(SFS_BLKSIZE >= sizeof(struct sfs_disk_entry));
+    LOG_TAB("已校验: super, inode, entry < 1block.\n");
 
     if (dev->d_blocksize != SFS_BLKSIZE) {
         return -E_NA_DEV;
     }
-
+    LOG_TAB("初始化开始: fs 结构\n");
     /* allocate fs structure */
     struct fs *fs;
     if ((fs = alloc_fs(sfs)) == NULL) {
         return -E_NO_MEM;
     }
     struct sfs_fs *sfs = fsop_info(fs, sfs);
+    LOG_TAB("初始化子类型: sfs.\n");
+
     sfs->dev = dev;
 
     int ret = -E_NO_MEM;
@@ -209,13 +212,14 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     if ((sfs->sfs_buffer = sfs_buffer = kmalloc(SFS_BLKSIZE)) == NULL) {
         goto failed_cleanup_fs;
     }
+    LOG_TAB("已分配 sfs 缓冲区: sfs->sfs_buffer \n");
 
     /* load and check superblock */
     /* 加载&校验超级块(占 1 块) */
     if ((ret = sfs_init_read(dev, SFS_BLKN_SUPER, sfs_buffer)) != 0) {
         goto failed_cleanup_sfs_buffer;
     }
-    LOG_TAB("已加载: 超级块 \n");
+    LOG_TAB("已加载: 超级块.\n");
 
     ret = -E_INVAL;
 
@@ -280,6 +284,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     fs->fs_unmount = sfs_unmount;
     fs->fs_cleanup = sfs_cleanup;
     *fs_store = fs;
+    LOG_TAB("sfs_do_mount: 挂载 sfs 完毕.\n");
     return 0;
 
 failed_cleanup_freemap:

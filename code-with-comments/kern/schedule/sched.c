@@ -142,7 +142,7 @@ schedule(void) {                                        // 1. 触发
     {
         current->need_resched = 0;
         if (current->state == PROC_RUNNABLE) {
-            sched_class_enqueue(current);               // 2. 当前进程入队
+            sched_class_enqueue(current);               // 2. 当前进程状态若是 runnable 则入队,若是其他,如 wait,则不入队
         }
         if ((next = sched_class_pick_next()) != NULL) { // 3. 池内选取新进程
             sched_class_dequeue(next);                  // 4. 新进程出队

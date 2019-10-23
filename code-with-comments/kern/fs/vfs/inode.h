@@ -43,14 +43,17 @@ struct iobuf;
  * inode: inode 基类, 实际可能有两种子类型: device 类型和 sfs_inode 类型.
  */ 
 struct inode {
+    // 可派生类型
     union {                                 // 用于屏蔽不同文件系统差异
         struct device __device_info;        // 设备文件, 访问外围设备.对应设备文件系统内存inode信息
         struct sfs_inode __sfs_inode_info;  // 常规文件, 对应SFS文件系统内存inode信息
     } in_info;
-    enum {// 可派生类型
+    enum {// 可派生类型标识
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
     } in_type;                              // 此 inode 类型
+
+    // 公共部分
     int ref_count;                          // 此 inode 的引用计数
     int open_count;                         // 打开此 inode 对应文件的个数
     struct fs *in_fs;                       // 抽象的文件系统,包含访问文件系统的函数指针
@@ -74,6 +77,7 @@ struct inode {
      })
 
 // vop = vfs operation
+// 取出 inode 中的派生部分
 #define vop_info(node, type)                                        __vop_info(node, type)
 
 #define info2node(info, type)                                       \

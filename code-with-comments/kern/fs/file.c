@@ -242,6 +242,7 @@ file_close(int fd) {
  */ 
 int
 file_read(int fd, void *base, size_t len, size_t *copied_store) {
+    LOG("file_read: \n");
     int ret;
     struct file *file;
     *copied_store = 0;
@@ -249,6 +250,7 @@ file_read(int fd, void *base, size_t len, size_t *copied_store) {
     if ((ret = fd2file(fd, &file)) != 0) {
         return ret;
     }
+    LOG_TAB("1. fd => file.\n");
     if (!file->readable) {
         return -E_INVAL;
     }
