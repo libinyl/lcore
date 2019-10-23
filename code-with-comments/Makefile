@@ -329,6 +329,10 @@ TERMINAL := zsh
 dbg4ec: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -parallel stdio $(QEMUOPTS) -serial null
 
+# 可以成功输出从用户态到内核态的信息!
+dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS)
+
 debug-gdb: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(TERMINAL) -c "$(GDB) -q -x tools/gdbinit"
 

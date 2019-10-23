@@ -475,7 +475,7 @@ copy_fs(uint32_t clone_flags, struct proc_struct *proc) {
         goto bad_files_struct;
     }
 
-    if ((ret = dup_fs(filesp, old_filesp)) != 0) {
+    if ((ret = dup_files(filesp, old_filesp)) != 0) {
         goto bad_dup_cleanup_fs;
     }
 
@@ -1184,6 +1184,7 @@ const char *argv[] = {path, ##__VA_ARGS__, NULL};       \
 // 最终通过 exec 执行程序
 static int
 user_main(void *arg) {
+LOG("已进入: user_main:\n");
 #ifdef TEST
 #ifdef TESTSCRIPT
     KERNEL_EXECVE3(TEST, TESTSCRIPT);

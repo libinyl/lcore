@@ -277,13 +277,13 @@ trap_dispatch(struct trapframe *tf) {
          */ 
         ticks ++;
         assert(current != NULL);
-        // if(ticks%(100)==0){
+         if(ticks%(100)==0){
         //     LOG("触发了秒级时钟中断.\n");
         //     //调试 hack: 降低系统的进程切换时间
         //     // ticks 每次增加时过去了 10 毫秒,那么是 100 的倍数时经过 1 秒
         //     // n秒即是 100*n
-        //     run_timer_list();
-        // }
+             run_timer_list();
+         }
         break;
     case IRQ_OFFSET + IRQ_COM1:
         //c = cons_getc();
@@ -291,7 +291,7 @@ trap_dispatch(struct trapframe *tf) {
         //break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
-        //LOG("kbd [%03d] %c\n", c, c);
+        LOG("\nkbd [%03d] %c\n", c, c);
         {
           extern void dev_stdin_write(char c);
           dev_stdin_write(c);
