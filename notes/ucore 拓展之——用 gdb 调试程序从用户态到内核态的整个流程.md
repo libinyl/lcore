@@ -33,11 +33,11 @@ dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 
 最终我们一路跟踪到`user/libs/syscall.c`的`syscall`, 即将陷入中断.此时再执行`n`,就跟不到代码了.
 
-![](2019-10-24-00-57-35.png)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E6%80%81%E7%A8%8B%E5%BA%8F%204.png?raw=1)
 
 此时只需键入`file bin/kernel`,就进入了内核态的调试环境!再打个断点, 如`b trap`, 就接住这个系统调用了!
 
-![](2019-10-24-00-58-41.png)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E6%80%81%E7%A8%8B%E5%BA%8F%205.png?raw=1)
 
 我想,linux 内核调试起来大概也是如此的流程?
 
