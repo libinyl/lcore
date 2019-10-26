@@ -20,7 +20,7 @@ dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 4. 此时在另一终端执行`gdb bin/kernel`, 并`target remote localhost:1234`连接上 qemu, 观察到熟悉的提示信息.事实上到此为止与往常没有明显不同. 现在可以键入`c`,让内核自由运行,直到运行了shell.
 5. 现在的状态是什么? 你可以枉顾 gdb 的存在,在 ucore 执行你的用户程序,如下图:
 
-![](https://github.com/libinyl/lcore/blob/master/images/gdb%20%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E7%A8%8B%E5%BA%8F.png?raw=1)
+![](https://github.com/libinyl/lcore/blob/master/images/gdb%20%E8%B0%83%E8%AF%95%E7%94%A8%E6%88%B7%E7%A8%8B%E5%BA%8F.jpg?raw=1)
 
 1. 但是此时 gdb 加载的是 kernel 的符号.现在只需`Ctrl C`中断 gdb,再键入`file disk0/ls`,即可加载 ls 的符号! 这是...热加载?
 2. 此时键入`b main`,就可以像调试普通用户态程序一样调试 `ls` 了, 如下:
