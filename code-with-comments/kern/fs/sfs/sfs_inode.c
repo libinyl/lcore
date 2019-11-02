@@ -120,7 +120,7 @@ static int
 sfs_create_inode(struct sfs_fs *sfs, struct sfs_disk_inode *din, uint32_t ino, struct inode **node_store) {
     struct inode *node;
     // 1. 分配新的 sfs_inode 内存
-    if ((node = alloc_inode(sfs_inode)) != NULL) {
+    if ((node = alloc_inode(sfs_inode)) != NULL) {// 初始化 sfs_inode 类型的 inode 结构
         vop_init(node, sfs_get_ops(din->type), info2fs(sfs, sfs));
         struct sfs_inode *sin = vop_info(node, sfs_inode);
         sin->din = din, sin->ino = ino, sin->dirty = 0, sin->reclaim_count = 1;
@@ -1004,7 +1004,7 @@ out_unlock:
  *              refers to.
  * 
  * 给定*根* inode 和 相对路径 path, 返回相应的 inode.
- * 
+ * //此时传入的 node 的 type 应当是 dir
  * 
  */
 static int

@@ -70,7 +70,7 @@ vfs_cleanup(void) {
  * vfs_get_root - Given a device name (stdin, stdout, etc.), hand
  *                back an appropriate inode.
  * 
- * 对于给定的设备名称, 返回一个合适的 inode
+ * 对于给定的*设备*名称, 返回一个合适的 inode. 具体的"合适",如果有文件系统,则返回文件系统的 root,如果没有,直接返回设备 inode.
  */
 int
 vfs_get_root(const char *devname, struct inode **node_store) {

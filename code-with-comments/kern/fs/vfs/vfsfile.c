@@ -43,7 +43,7 @@ vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     ret = vfs_lookup(path, &node);
     // ret=0 说明已经找到,否则考察是否创建
     if (ret != 0) {
-        if (ret == -16 && (create)) {
+        if (ret == -16 && (create)) {//  todo: 改为 -E_NOENT
             char *name;
             struct inode *dir;
             // 要创建 node,首先要找到此路径所属的 dir 和名称

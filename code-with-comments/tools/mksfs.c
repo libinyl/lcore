@@ -599,7 +599,7 @@ open_file(struct sfs_fs *sfs, struct cache_inode *file, const char *filename, in
     ssize_t ret, last = SFS_BLKSIZE;
     while ((ret = read(fd, buffer, sizeof(buffer))) != 0) {// 宿主机文件可能大于 1 个 buffer,要持续读写
         assert(last == SFS_BLKSIZE);
-        uint32_t ino = sfs_alloc_ino(sfs);
+        uint32_t ino = sfs_alloc_ino(sfs);// 每循环一次就向新块写入
         write_block(sfs, buffer, ret, ino);
         append_block(sfs, file, ret, ino, filename);
         last = ret;

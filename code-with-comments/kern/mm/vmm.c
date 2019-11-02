@@ -244,7 +244,7 @@ copy_from_user(struct mm_struct *mm, void *dst, const void *src, size_t len, boo
 
 /**
  * 
- * 把数据从内核区复制到用户区
+ * 把数据从内核区复制到用户区 由于调用此函数的数据在栈上,所以需要复制一份返回给用户
  * 考虑目标用户区地址合法性
  */ 
 bool

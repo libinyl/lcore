@@ -51,7 +51,7 @@ HOSTCFLAGS	:= -g -Wall -O0 -D_FILE_OFFSET_BITS=64
 GDB		:= gdb
 
 CC		:= $(GCCPREFIX)gcc
-CFLAGS	:= -fno-builtin -fno-PIC -Wall -ggdb -m32 -gstabs -nostdinc $(DEFS)
+CFLAGS	:= -fno-builtin -fno-PIC -Wall -ggdb3 -m32 -gstabs -nostdinc $(DEFS)
 CFLAGS	+= $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CTYPE	:= c S
 
@@ -323,9 +323,13 @@ monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
 
 TERMINAL := zsh
 
-# 调试方法: 
+# 本地调试方法: 
 # 		开启 1 个终端, make debug-qemu
 # 		开启另一个终端, make debug-gdb, 即可分开gdb 输出和 qemu 输出,避免花屏,输出更加清晰
+
+# 远程调试方法:
+#		1) make debug-qemu
+#		2) clion 中配置, 192.168.1.17:1234, 必须配置 map, 最好复制二进制文件到本地,并在 clion 中指定
 
 debug-qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS)  -nographic

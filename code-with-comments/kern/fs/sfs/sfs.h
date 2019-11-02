@@ -77,7 +77,7 @@ struct sfs_disk_entry {
 #define sfs_dentry_size                             \
     sizeof(((struct sfs_disk_entry *)0)->name)
 
-// SFS 的 inode,
+// SFS 的 inode, 加载到内存中的inode
 struct sfs_inode {
     struct sfs_disk_inode *din;                     /* on-disk inode */
     uint32_t ino;                                   /* inode number */
