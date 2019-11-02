@@ -24,12 +24,13 @@ get_device(char *path, char **subpath, struct inode **node_store) {
     if (colon < 0 && slash != 0) {
         /*
          * 
-         * 没有冒号,且斜杠不在最开始的位置或者没有出现.例如abc/c
+         * 没有冒号,且第一个字符不是/ , 例如abc/c
          *  - 说明没有指定设备;这是一个相对路径或者就是个文件名.
          *  - 接下来从当前文件夹开始,把整个字符串作为子路径.
          *  - 返回pwd 的 inode
          * */
         *subpath = path;
+        // 由于是相对路径,所以返回当前工作目录的 inode
         return vfs_get_curdir(node_store);
     }
     

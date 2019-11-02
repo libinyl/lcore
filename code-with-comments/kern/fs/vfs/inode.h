@@ -43,12 +43,12 @@ struct iobuf;
  * inode: inode 基类, 实际可能有两种子类型: device 类型和 sfs_inode 类型.
  */ 
 struct inode {
-    // 可派生类型
+    // 内嵌具体结构
     union {                                 // 用于屏蔽不同文件系统差异
         struct device __device_info;        // 设备文件, 访问外围设备.对应设备文件系统内存inode信息
         struct sfs_inode __sfs_inode_info;  // 常规文件, 对应SFS文件系统内存inode信息
     } in_info;
-    enum {// 可派生类型标识
+    enum {// 相当于 typeid
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
     } in_type;                              // 此 inode 类型
@@ -60,6 +60,7 @@ struct inode {
     const struct inode_ops *in_ops;         // 抽象的 inode 操作, 具体见 struct inode_ops
 };
 
+// typename到 typeid 的映射.
 #define __in_type(type)                                             inode_type_##type##_info
 
 #define check_inode_type(node, type)                                ((node)->in_type == __in_type(type))
@@ -85,7 +86,7 @@ struct inode {
 
 struct inode *__alloc_inode(int type);
 
-#define alloc_inode(type)                                           __alloc_inode(__in_type(type))
+#define alloc_inode(type)                                           __alloc_inode(__in_type(type)) //创建 inode 时必须指定具体类型,用 __in_type 映射类型字符串与 id 的关系, 初始化in_type字段.
 
 #define MAX_INODE_COUNT                     0x10000
 
@@ -240,6 +241,9 @@ void inode_check(struct inode *node, const char *opstr);
  * 方向: inode-->iobuffer
  * 单位: 
  * 
+ */ 
+/**
+ * 调用虚函数
  */ 
 #define vop_read(node, iob)                                         (__vop_op(node, read)(node, iob))
 #define vop_write(node, iob)                                        (__vop_op(node, write)(node, iob))

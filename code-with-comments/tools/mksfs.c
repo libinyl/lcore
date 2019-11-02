@@ -1,7 +1,7 @@
 /**
  * 磁盘文件系统生成程序.
- * 
- */ 
+ *
+ */
 
 /* prefer to compile mksfs on 64-bit linux systems.
 
@@ -141,7 +141,7 @@ safe_fchdir(int fd) {
 }
 
 #define SFS_MAGIC                               0x2f8dbe2a
-#define SFS_NDIRECT                             12                          // 
+#define SFS_NDIRECT                             12                          // 一个 inode 最大 block 数 = 12
 #define SFS_BLKSIZE                             4096                        // 块大小 = 4KB
 #define SFS_MAX_NBLKS                           (1024UL * 512)              // 实际的文件系统块数最大值 = 4K * 512K. 原注释 4K*512K 是不是有问题? 如果按此宏计算,文件系统最大值为 1024*512*4KB = 2GB
 #define SFS_MAX_INFO_LEN                        31
@@ -174,8 +174,8 @@ struct cache_inode {
         uint32_t db_indirect;
     } inode;
     ino_t real;
-    uint32_t ino;
-    uint32_t nblks;
+    uint32_t ino;   // 数据起始 block 号
+    uint32_t nblks; // 数据占据的块数
     struct cache_block *l1, *l2;
     struct cache_inode *hash_next;
 };
@@ -197,10 +197,10 @@ struct sfs_fs {
     struct cache_inode *inodes[HASH_LIST_SIZE];
     struct cache_block *blocks[HASH_LIST_SIZE];
 };
-
+// entry block 的内容 32+256B
 struct sfs_entry {
-    uint32_t ino;
-    char name[SFS_MAX_FNAME_LEN + 1];
+    uint32_t ino;   // 此 entryblock 指向的 inode 号
+    char name[SFS_MAX_FNAME_LEN + 1]; // 此 entry block 指向的 inode 的名称
 };
 
 static uint32_t
@@ -231,10 +231,10 @@ search_cache_block(struct sfs_fs *sfs, uint32_t ino) {
     return cb;
 }
 /*
- * 
- * 
- * 
- */ 
+ *
+ * 若指定 ino=0 则新分配 ino
+ * type=1:file type=2:dir
+ */
 static struct cache_inode *
 alloc_cache_inode(struct sfs_fs *sfs, ino_t real, uint32_t ino, uint16_t type) {
     log("alloc_cache_inode:\n");
@@ -260,7 +260,7 @@ search_cache_inode(struct sfs_fs *sfs, ino_t real) {
 
 /**
  * 组装文件系统信息结构
- */ 
+ */
 struct sfs_fs *
 create_sfs(int imgfd) {
     log("create_sfs:\n");
@@ -273,13 +273,13 @@ create_sfs(int imgfd) {
         logtab("计算块数 ninos = %ud\n",ninos);
         ninos = SFS_MAX_NBLKS;
         warn("img file is too big (%llu bytes, only use %u blocks).\n",
-                (unsigned long long)stat->st_size, ninos);
+             (unsigned long long)stat->st_size, ninos);
     }
     logtab("已确定块数 ninos = min{ (stat->st_size / SFS_BLKSIZE), SFS_MAX_NBLKS} = %u\n",ninos);
     // bitmap
     if ((next_ino = SFS_BLKN_FREEMAP + (ninos + SFS_BLKBITS - 1) / SFS_BLKBITS) >= ninos) {
         bug("img file is too small (%llu bytes, %u blocks, bitmap use at least %u blocks).\n",
-                (unsigned long long)stat->st_size, ninos, next_ino - 2);
+            (unsigned long long)stat->st_size, ninos, next_ino - 2);
     }
     logtab("已确定 next_ino = %u\n", next_ino);
     logtab("开始初始化 sfs 结构.\n");
@@ -341,30 +341,30 @@ subpath_show(FILE *fout, struct sfs_fs *sfs, const char *name) {
     fprintf(fout, "\n");
 }
 
-/**
- * 向文件磁盘写入一整块.
- * 
+/** 对 pwrite 的封装,
+ * 向文件磁盘写入一整块数据,用于新增 inode table 元素,或者新增 block
+ * 1) 用于写入dir 的 block,则 data 为 entry,
  * 向 sfs->imgfd 的 ino 号块写入 data 数据的前 len 个字节.
- */ 
+ */
 static void
 write_block(struct sfs_fs *sfs, void *data, size_t len, uint32_t ino) {
     log("write_block:\n");
     _NO_LOG_START
-    assert(len <= SFS_BLKSIZE && ino < sfs->ninos);
-    logtab("校验: 要写入的数据长度 len = %zu \n", len);
-    static char buffer[SFS_BLKSIZE];
-    logtab("调整 data: 若要写入的数据小于 1 块,则复制到大小为 1 块的缓冲区中,确保最后写入 1 整块数据.");
-    if (len != SFS_BLKSIZE) {
-        memset(buffer, 0, sizeof(buffer));
-        data = memcpy(buffer, data, len);
-        logtab("从data=>buffer, 复制了%zu个字节.\n",len);
-    }
-    off_t offset = (off_t)ino * SFS_BLKSIZE;
-    ssize_t ret;
-    if ((ret = pwrite(sfs->imgfd, data, SFS_BLKSIZE, offset)) != SFS_BLKSIZE) {
-        bug("write %u block failed: (%d/%d).\n", ino, (int)ret, SFS_BLKSIZE);
-    }
-    logtab("已向 imgfd 从 offset = %lld 的位置开始写入了data 的一块数据\n", offset);
+        assert(len <= SFS_BLKSIZE && ino < sfs->ninos);
+        logtab("校验: 要写入的数据长度 len = %zu \n", len);
+        static char buffer[SFS_BLKSIZE];
+        logtab("调整 data: 若要写入的数据小于 1 块,则复制到大小为 1 块的缓冲区中,确保最后写入 1 整块数据.");
+        if (len != SFS_BLKSIZE) {
+            memset(buffer, 0, sizeof(buffer));
+            data = memcpy(buffer, data, len);
+            logtab("从data=>buffer, 复制了%zu个字节.\n",len);
+        }
+        off_t offset = (off_t)ino * SFS_BLKSIZE;
+        ssize_t ret;
+        if ((ret = pwrite(sfs->imgfd, data, SFS_BLKSIZE, offset)) != SFS_BLKSIZE) {
+            bug("write %u block failed: (%d/%d).\n", ino, (int)ret, SFS_BLKSIZE);
+        }
+        logtab("已向 imgfd 从 offset = %lld 的位置开始写入了data 的一块数据\n", offset);
     _NO_LOG_END
 }
 
@@ -453,7 +453,7 @@ void open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inod
 void open_file(struct sfs_fs *sfs, struct cache_inode *file, const char *filename, int fd);
 void open_link(struct sfs_fs *sfs, struct cache_inode *file, const char *filename);
 
-#define SFS_BLK_NENTRY                          (SFS_BLKSIZE / sizeof(uint32_t))
+#define SFS_BLK_NENTRY                          (SFS_BLKSIZE / sizeof(uint32_t))    // 索引 block 的索引数=1024
 #define SFS_L0_NBLKS                            SFS_NDIRECT
 #define SFS_L1_NBLKS                            (SFS_BLK_NENTRY + SFS_L0_NBLKS)
 #define SFS_L2_NBLKS                            (SFS_BLK_NENTRY * SFS_BLK_NENTRY + SFS_L1_NBLKS)
@@ -473,7 +473,7 @@ update_cache(struct sfs_fs *sfs, struct cache_block **cbp, uint32_t *inop) {
     }
     *cbp = cb, *inop = ino;
 }
-
+// 对于操作的 inode 更新其状态.file: 就是操作的 inode. ino:新添加的block号,需要在 file 中维护
 static void
 append_block(struct sfs_fs *sfs, struct cache_inode *file, size_t size, uint32_t ino, const char *filename) {
     static_assert(SFS_LN_NBLKS <= SFS_L2_NBLKS, "SFS_LN_NBLKS <= SFS_L2_NBLKS");
@@ -501,10 +501,10 @@ append_block(struct sfs_fs *sfs, struct cache_inode *file, size_t size, uint32_t
         data1[nblks % SFS_BLK_NENTRY] = ino;
     }
     file->nblks ++;
-    inode->size += size;
+    inode->size += size;// 对于目录 inode, 其成员的文件名占据大小.
     inode->blocks ++;
 }
-
+// 增加一个条目需要改变两个对象的状态: inode 和 block. 前一个是 current, 后一个是 file,也就是实际数据
 static void
 add_entry(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *file, const char *name) {
     static struct sfs_entry __entry, *entry = &__entry;
@@ -525,7 +525,7 @@ add_dir(struct sfs_fs *sfs, struct cache_inode *parent, const char *dirname, int
     safe_fchdir(curfd), subpath_pop(sfs);
     add_entry(sfs, parent, current, dirname);
 }
-
+// add 操作,添加文件,是在 current inode目录下添加文件,所以一方面要更新文件的 inode,还要更新 current inode 目录
 static void
 add_file(struct sfs_fs *sfs, struct cache_inode *current, const char *filename, int fd, ino_t real) {
     struct cache_inode *file;
@@ -542,7 +542,7 @@ add_link(struct sfs_fs *sfs, struct cache_inode *current, const char *filename, 
     open_link(sfs, file, filename);
     add_entry(sfs, current, file, filename);
 }
-
+// 每一个"open",最终都置状态为创建完毕.
 void
 open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *parent) {
     DIR *dir;
@@ -557,7 +557,7 @@ open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *pa
         if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
             continue ;
         }
-        if (name[0] == '.') {
+        if (name[0] == '.') {// 略过隐藏文件
             continue ;
         }
         if (strlen(name) > SFS_MAX_FNAME_LEN) {
@@ -567,7 +567,7 @@ open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *pa
         if (S_ISLNK(stat->st_mode)) {
             add_link(sfs, current, name, stat->st_ino);
         }
-        else {
+        else { //把编译好的二进制文件写入到磁盘中
             int fd;
             if ((fd = open(name, O_RDONLY)) < 0) {
                 open_bug(sfs, NULL, "open failed: %s\n", name);
@@ -575,7 +575,7 @@ open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *pa
             if (S_ISDIR(stat->st_mode)) {
                 add_dir(sfs, current, name, dirfd(dir), fd, stat->st_ino);
             }
-            else if (S_ISREG(stat->st_mode)) {
+            else if (S_ISREG(stat->st_mode)) {// regular 常规文件
                 add_file(sfs, current, name, fd, stat->st_ino);
             }
             else {
@@ -592,12 +592,12 @@ open_dir(struct sfs_fs *sfs, struct cache_inode *current, struct cache_inode *pa
     }
     closedir(dir);
 }
-
+// open 操作,保证最终创建完毕,open_file 专门面向 文件.1)写 block 2)更新文件所在inode 状态
 void
 open_file(struct sfs_fs *sfs, struct cache_inode *file, const char *filename, int fd) {
     static char buffer[SFS_BLKSIZE];
     ssize_t ret, last = SFS_BLKSIZE;
-    while ((ret = read(fd, buffer, sizeof(buffer))) != 0) {
+    while ((ret = read(fd, buffer, sizeof(buffer))) != 0) {// 宿主机文件可能大于 1 个 buffer,要持续读写
         assert(last == SFS_BLKSIZE);
         uint32_t ino = sfs_alloc_ino(sfs);
         write_block(sfs, buffer, ret, ino);
@@ -631,7 +631,7 @@ create_img(struct sfs_fs *sfs, const char *home) {
         bug("open home directory '%s' failed.\n", home);
     }
     safe_fchdir(homefd);
-    open_dir(sfs, sfs->root, sfs->root);
+    open_dir(sfs, sfs->root, sfs->root);//每个 open 都是保证最终的创建完毕状态, 前后两个参数分别是 inode 和 block
     safe_fchdir(curfd);
     close(curfd), close(homefd);
     close_sfs(sfs);
@@ -641,12 +641,12 @@ create_img(struct sfs_fs *sfs, const char *home) {
 static void
 static_check(void) {
 #if defined(__i386__)
-// IA-32, gcc with -D_FILE_OFFSET_BITS=64
+    // IA-32, gcc with -D_FILE_OFFSET_BITS=64
 	static_assert(sizeof(off_t) == 8, "sizeof off_t should be 8 in i386");
     static_assert(sizeof(ino_t) == 8,"sizeof ino_t should be 8 in i386");
     printf("in i386 system, need more testing\n");
 #elif defined(__x86_64__)
-// AMD64, Recommend, gcc with -D_FILE_OFFSET_BITS=64
+// AMD64, Recommend, gcc with -D_FILE_OFFSET_BITS=64  off_t 和 ino_t 为 long long 类型
     static_assert(sizeof(off_t) == 8, "sizeof off_t should be 8 in x86_64");
     static_assert(sizeof(ino_t) == 8, "sizeof ino_t should be 8 in x86_64");
 #else
@@ -656,18 +656,36 @@ static_check(void) {
     static_assert(SFS_MAX_FILE_SIZE <= 0x80000000UL,"SFS_MAX_FILE_SIZE <= 0x80000000UL");
 }
 
+/**
+ *  按 SFS 格式化磁盘
+ *  并把 disk0 下编译好的程序写入到虚拟磁盘 sfs.img 中
+ *
+ * 编译:
+ *
+ *
+ *
+ * 执行:
+ * mksfs bin/sfs.img disk0
+ *
+ * 远程调试:
+ * gdbserver :1233 bin/mksfs bin/sfs.img disk0
+ *
+ * 调试:
+ * 清空 sfs.img: dd if=/dev/zero of=bin/sfs.img bs=1Mwrite_block count=128
+ * 带参数调试:    gdb --args bin/mksfs bin/sfs.img disk0
+ */
 int
 main(int argc, char **argv) {
     log("\n\n----------文件系统生成程序----------\n\n");
     log("SFS 文件系统设计规格:\n");
     log("\n/------ next_ino = 3 ------|----- unused_blocks ---\\\nsuper | rootinode | bitmap |------------------------\n\\----------------------- ninos---------------------/\n\n");
-    logtab("每块大小:%d B\n",SFS_BLKSIZE);
-    logtab("super 起始块: %d\n",SFS_BLKN_SUPER);
-    logtab("root 起始块: %d\n",SFS_BLKN_ROOT);
-    logtab("freemap 起始块: %d\n",SFS_BLKN_FREEMAP);
+    logtab("每块大小:%d B\n",SFS_BLKSIZE);          // 4KB
+    logtab("super 起始块: %d\n",SFS_BLKN_SUPER);    // 0
+    logtab("root 起始块: %d\n",SFS_BLKN_ROOT);      // 1
+    logtab("freemap 起始块: %d\n",SFS_BLKN_FREEMAP); // 2
     //命令: mksfs bin/sfs.img disk0, 把 sfs.img 这个 128M 的空文件
     log("参数: %s, %s\n", argv[1],argv[2]);
-    
+
     static_check();
     if (argc != 3) {
         bug("usage: <input *.img> <input dirname>\n");

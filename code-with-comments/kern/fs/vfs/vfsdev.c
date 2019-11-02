@@ -152,6 +152,8 @@ check_devname_conflict(const char *devname) {
 static int
 vfs_do_add(const char *devname, struct inode *devnode, struct fs *fs, bool mountable) {
     assert(devname != NULL);
+    // 1. 只添加fs,则devnode=NULL 且不可挂载
+    // 2. 只添加设备, 则devnode != NULL 且类型为 device
     assert((devnode == NULL && !mountable) || (devnode != NULL && check_inode_type(devnode, device)));
     if (strlen(devname) > FS_MAX_DNAME_LEN) {
         return -E_TOO_BIG;
@@ -234,7 +236,7 @@ find_mount(const char *devname, vfs_dev_t **vdev_store) {
  * 详解: 把名为devname的设备通过函数 mountfunc 挂载到虚拟文件系统上来.
  * 
  * 
- * 
+ * mountfunc: 特定文件系统加载器
  *
  * The DATA argument is passed through unchanged to MOUNTFUNC.
  */

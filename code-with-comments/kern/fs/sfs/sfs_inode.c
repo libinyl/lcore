@@ -668,8 +668,7 @@ out:
 
 
 
- */
-/**
+/*
  * 
  */ 
 static inline int

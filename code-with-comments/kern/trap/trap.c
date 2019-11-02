@@ -291,10 +291,10 @@ trap_dispatch(struct trapframe *tf) {
         //break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
-        LOG("\nkbd [%03d] %c\n", c, c);
+        //LOG("\nkbd [%03d] %c\n", c, c);
         {
           extern void dev_stdin_write(char c);
-          dev_stdin_write(c);
+          dev_stdin_write(c);   //输入回显
         }
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.

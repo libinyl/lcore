@@ -66,7 +66,7 @@ struct fs {
             &(__fs->fs_info.__##type##_info);                       \
         })
 
-// 返回对应类型的 fs
+// 返回具体子结构
 #define fsop_info(fs, type)                 __fsop_info(fs, type)
 
 #define info2fs(info, type)                                         \

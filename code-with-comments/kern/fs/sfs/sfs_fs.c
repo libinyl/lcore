@@ -183,6 +183,8 @@ sfs_init_freemap(struct device *dev, struct bitmap *freemap, uint32_t blkno, uin
  * 
  * @dev:        the block device contains sfs file system
  * @fs_store:   the fs struct in memroy
+ * 
+ * 最终把 fs 初始化完毕并返回
  */
 static int
 sfs_do_mount(struct device *dev, struct fs **fs_store) {
@@ -197,6 +199,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
     }
     LOG_TAB("初始化开始: fs 结构\n");
     /* allocate fs structure */
+    // 注意编程顺序:1. 申请内存 2.初始化内部结构 3. 初始化外部结构 
     struct fs *fs;
     if ((fs = alloc_fs(sfs)) == NULL) {
         return -E_NO_MEM;
@@ -279,6 +282,7 @@ sfs_do_mount(struct device *dev, struct fs **fs_store) {
             blocks - unused_blocks, unused_blocks, blocks);
 
     /* link addr of sync/get_root/unmount/cleanup funciton  fs's function pointers*/
+    // 初始化 fs 函数指针部分, 指向 sfs 的函数
     fs->fs_sync = sfs_sync;
     fs->fs_get_root = sfs_get_root;
     fs->fs_unmount = sfs_unmount;

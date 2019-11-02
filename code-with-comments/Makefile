@@ -46,7 +46,7 @@ HOSTCC		:= gcc
 ## for mksfs program, -D_FILE_OFFSET_BITS=64 can guarantee sizeof(off_t)==8,  sizeof(ino_t) ==8
 ## for 64 bit gcc, to build 32-bit mksfs, you can use below line
 ## HOSTCFLAGS	:= -g -Wall -m32 -O2 -D_FILE_OFFSET_BITS=64
-HOSTCFLAGS	:= -g -Wall -O2 -D_FILE_OFFSET_BITS=64
+HOSTCFLAGS	:= -g -Wall -O0 -D_FILE_OFFSET_BITS=64
 
 GDB		:= gdb
 
@@ -323,19 +323,17 @@ monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
 
 TERMINAL := zsh
 
-# 建议调试方法:
-# 启动 1 个窗口,执行 make dbg4ec
-# 启动另一个窗口,执行 make debug-sep,即可分开gdb 输出和 qemu 输出,避免花屏,输出更加清晰
-dbg4ec: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
-	$(V)$(QEMU) -S -s -parallel stdio $(QEMUOPTS) -serial null
+# 调试方法: 
+# 		开启 1 个终端, make debug-qemu
+# 		开启另一个终端, make debug-gdb, 即可分开gdb 输出和 qemu 输出,避免花屏,输出更加清晰
 
-# 可以成功输出从用户态到内核态的信息!
-dbg-u2k: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
-	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS)
+debug-qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS)  -nographic
 
 debug-gdb: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(TERMINAL) -c "$(GDB) -q -x tools/gdbinit"
 
+####### 容易花屏, 不建议使用 begin #######
 debug: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -parallel stdio $(QEMUOPTS) -serial null &
 	$(V)sleep 2
@@ -345,6 +343,8 @@ debug-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(QEMU) -S -s -serial mon:stdio $(QEMUOPTS) -nographic &
 	$(V)sleep 2
 	$(V)$(TERMINAL) -c "$(GDB) -q -x tools/gdbinit"
+
+####### 容易花屏, 不建议使用 end #######
 
 RUN_PREFIX	:= _binary_$(OBJDIR)_$(USER_PREFIX)
 MAKEOPTS	:= --quiet --no-print-directory
