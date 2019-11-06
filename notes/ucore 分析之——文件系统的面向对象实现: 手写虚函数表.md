@@ -73,9 +73,9 @@ typedef struct {
 
 以 `inode` 为例. 如果用 C++ 改写代码,最终形成的类图是这样的:
 
-![]()
+![](https://github.com/libinyl/lcore/blob/master/images/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%B1%BB%E5%9B%BEfs.png?raw=1)
 
-![](2019-11-01-12-54-39.png)
+![](https://github.com/libinyl/lcore/blob/master/images/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%B1%BB%E5%9B%BEinode.png?raw=1)
 
 代码见链接(只突出继承关系, 无具体实现):
 
