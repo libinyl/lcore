@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <kdebug.h>
 
+
+
 /* 
  * iobuf_init - init io buffer struct.
  *                set up io_base to point to the buffer you want to transfer to, and set io_len to the length of buffer;
@@ -41,7 +43,7 @@ iobuf_move(struct iobuf *iob, void *data, size_t len, bool m2b, size_t *copiedp)
     }
     if (alen > 0) {
         void *src = iob->io_base, *dst = data;
-        if (m2b) {
+        if (m2b) {//read.
             void *tmp = src;
             src = dst, dst = tmp;
         }

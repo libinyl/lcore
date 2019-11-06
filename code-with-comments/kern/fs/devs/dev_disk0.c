@@ -15,7 +15,7 @@
 #define DISK0_BUFSIZE                   (4 * DISK0_BLKSIZE)         // 磁盘模块缓冲区byte 数
 #define DISK0_BLK_NSECT                 (DISK0_BLKSIZE / SECTSIZE)  // 每个块占的扇区数(=8)
 
-static char *disk0_buffer;      // 磁盘IO的缓存,4 个 block 大小
+static char *disk0_buffer;      // 磁盘IO的缓存,4 个 block 大小 = DISK0_BUFSIZE
 static semaphore_t disk0_sem;
 
 static void

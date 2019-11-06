@@ -1,6 +1,6 @@
 ## ucore 分析之——文件系统的面向对象实现（一）: 手写虚函数表
 
-这篇文章的灵感来自@冯东 大佬的回答：
+这篇文章的灵感来自 @冯东 大佬的回答：
 
 C++中有哪些设计精良的部分（精华），还有哪些是不值得花费很多时间探究的知识点？ - 冯东的回答 - 知乎
 https://www.zhihu.com/question/32271535/answer/55386211
@@ -13,18 +13,18 @@ https://www.zhihu.com/question/32271535/answer/55386211
 
 历史上对不同类型的设备可能需要分别处理，意味着开发者面临着多种 API, 一些早期的系统甚至需要用不同的命令处理位于不同软盘的文件。而 Unix 把一些进程间通信的概念（管道，套接字，共享内存等）也集成到文件的 api 管理范畴，open 一个文件，进程就多维护一个文件描述符，作为对二进制流的 IO 接口。从 Unix 之后，文件不再仅仅是指持久化存储的数据，更是涵盖了多种具体类型的，强大而简单的抽象。
 
-![](/images/文件系统分析&#32;3.png)
+![](https://github.com/libinyl/lcore/blob/master/images/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90%203.png?raw=1)
 
 ## 文件系统的统一
 
 想知道你的 linux 系统支持哪些文件系统，只需执行 `cat /proc/filesystems`, 我安装的 ubuntu 显示有 33 种--是的，需要再向上抽象一层，否则操作系统真的要分别管理它们，这太累了。linux 确实做了抽象，可以参考 [Overview of the Linux Virtual File System](https://www.kernel.org/doc/Documentation/filesystems/vfs.txt) 了解细节。总之，为了支持各种类型的文件系统，以及为了提供更丰富的功能，一个 VFS（虚拟文件系统）势在必得。
 
-![](/images/文件系统分析&#32;2.png)
+![](https://github.com/libinyl/lcore/blob/master/images/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90%202.png?raw=1)
 
 
 ## 文件的组织
 
-人类渴望简单，简单就是符合直觉。
+人类渴望简单，简单就是符合直觉。(待第二篇补充...)
 
 ## ucore 的文件系统
 
@@ -32,7 +32,7 @@ https://www.zhihu.com/question/32271535/answer/55386211
 
 我们知道文件描述符于进程而言的重要性，也熟悉用法：`open`, `read`,`llseek`, `write`, `close`, 一气呵成。这些都是在与`VFS`打交道, 它帮我们分配`fd`, 根据路径名找到对应的`inode`, 最后返回 `fd`. 在这个过程中, `VFS` 不需要了解下层具体的文件系统如何实现`read`, `write`, 只要调用就好; 也不需要关心是什么文件, 只要解析(resolve)到具体的`inode`就好:
 
-![](/images/文件系统分析&#32;1.png)
+![](https://github.com/libinyl/lcore/blob/master/images/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90%201.png?raw=1)
 
 
 **VFS**
@@ -73,16 +73,17 @@ typedef struct {
 
 以 `inode` 为例. 如果用 C++ 改写代码,最终形成的类图是这样的:
 
-![](2019-11-01-12-51-24.png)
+![]()
 
 ![](2019-11-01-12-54-39.png)
 
 代码见链接(只突出继承关系, 无具体实现):
 
+https://github.com/libinyl/lcore/tree/master/blogcode/%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%86%E6%9E%90
+
 inode 有以下含义:
 
-- 对设备本身的抽象
-- 
+..未完待续...
 
 
 

@@ -36,8 +36,10 @@ static void safe_read(int fd, void *data, size_t len)
 int main(void)
 {
 	int fd1 = safe_open("sfs_filetest1", O_RDONLY);
-	struct stat *stat = safe_fstat(fd1);
-	assert(stat->st_size >= 0 && stat->st_blocks >= 0);
+//	struct stat *stat = safe_fstat(fd1);
+//	assert(stat->st_size >= 0 && stat->st_blocks >= 0);
+	char buf[4099];
+	safe_read(fd1, buf, sizeof(buf));
 	printf("sfs_filetest1 pass.\n");
 	return 0;
 }
